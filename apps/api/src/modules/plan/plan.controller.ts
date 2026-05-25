@@ -52,26 +52,20 @@ export class PlanController {
   ) {}
 
   /**
-   * User plan list. PHP applies the following access rules:
-   *  - return only plans where show=1 OR (plan.id == user.plan_id)
-   *  - if plan.renew = false and the plan is the user's current, still include it
-   *  - capacity_limit: subtract active user count from the limit so a sold-out plan
-   *    shows 0 (and the frontend can disable the buy button).
+   * User plan list. Mirrors V2Board's two distinct access rules:
+   *  - LIST (no id): return ONLY plans where show=1, regardless of which
+   *    plan the user owns. Hidden plans must never appear in the buy page.
+   *  - SINGLE (id query): allow show=1, OR (renew=1 AND user owns it).
+   *    A retired plan (renew=0) is hidden even from its current owner.
+   *  - capacity_limit: subtract active user count from the configured limit
+   *    so a sold-out plan reports 0 remaining (the frontend disables the
+   *    buy button accordingly).
    */
   @Get("user/plan/fetch")
   @UseGuards(AuthenticatedGuard)
   async userFetch(@Query() query: Record<string, unknown>, @Req() request: FastifyRequest) {
     const authUser = await this.authService.requireUser(extractAuthorization(request));
-    const me = await this.prisma.user.findUniqueOrThrow({
-      where: { id: authUser.id },
-      select: { planId: true }
-    });
     const requestedId = asNullableNumber(query.id);
-
-    const plans = await this.prisma.plan.findMany({
-      where: requestedId ? { id: requestedId } : {},
-      orderBy: [{ sort: "asc" }, { id: "asc" }]
-    });
 
     const counts = await this.prisma.user.groupBy({
       by: ["planId"],
@@ -80,13 +74,7 @@ export class PlanController {
     });
     const countByPlan = new Map(counts.map((item) => [item.planId, item._count._all]));
 
-    const visible = plans.filter((plan) => {
-      if (plan.show) return true;
-      if (plan.id === me.planId) return true;
-      return false;
-    });
-
-    const items = visible.map((plan) => {
+    const enrich = (plan: Plan) => {
       const used = countByPlan.get(plan.id) ?? 0;
       const capacity = plan.capacityLimit;
       const remaining = capacity === null ? null : Math.max(capacity - used, 0);
@@ -94,12 +82,26 @@ export class PlanController {
         ...planToLegacy(plan, used),
         capacity_limit: remaining
       };
-    });
+    };
 
     if (requestedId) {
-      return dataResponse(items[0] ?? null);
+      const me = await this.prisma.user.findUniqueOrThrow({
+        where: { id: authUser.id },
+        select: { planId: true }
+      });
+      const plan = await this.prisma.plan.findUnique({ where: { id: requestedId } });
+      if (!plan) return dataResponse(null);
+      const ownedByUser = plan.id === me.planId;
+      const visible = plan.show || (plan.renew && ownedByUser);
+      if (!visible) return dataResponse(null);
+      return dataResponse(enrich(plan));
     }
-    return dataResponse(items);
+
+    const plans = await this.prisma.plan.findMany({
+      where: { show: true },
+      orderBy: [{ sort: "asc" }, { id: "asc" }]
+    });
+    return dataResponse(plans.map(enrich));
   }
 
   @Get("staff/plan/fetch")
