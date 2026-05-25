@@ -33,6 +33,7 @@ export class UserOrderController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orders: OrderService,
+    private readonly payments: PaymentService,
     private readonly authService: AuthService
   ) {}
 
@@ -100,11 +101,12 @@ export class UserOrderController {
       where: { id: order.id },
       data: { paymentId, updatedAt: unixNow() }
     });
+    // Sukashi is Stripe-only — every active payment row produces a hosted
+    // Checkout Session URL that the user-side panel redirects to.
+    const session = await this.payments.createCheckout(payment, order, { request });
     return dataResponse({
-      type: payment.payment.toLowerCase(),
-      data: {
-        message: "请使用对应支付方式完成付款，回调后将自动激活订阅。"
-      }
+      type: "url",
+      data: session.url
     });
   }
 
@@ -430,40 +432,63 @@ export class AdminPaymentController {
     return dataResponse(payments);
   }
 
+  /**
+   * Sukashi is intentionally Stripe-only. The legacy V2Board panel sends
+   * the list as `[{name}, ...]`; returning a single item makes the admin
+   * "Add Payment" dropdown auto-select Stripe so the form schema below
+   * always matches.
+   */
   @Get("getPaymentMethods")
   async getPaymentMethods() {
-    return dataResponse([
-      { name: "AlipayF2F" },
-      { name: "EPay" },
-      { name: "Stripe" }
-    ]);
+    return dataResponse([{ name: "Stripe" }]);
   }
 
   @All("getPaymentForm")
-  async getPaymentForm(@Query() query: Record<string, unknown>, @Body() body?: Record<string, unknown>) {
-    const name = String(query.name ?? body?.name ?? "");
-    if (name === "EPay") {
-      return dataResponse({
-        epay_url: { label: "EPay API URL", type: "input" },
-        epay_pid: { label: "PID", type: "input" },
-        epay_key: { label: "Key", type: "input" }
-      });
+  async getPaymentForm(
+    @Query() query: Record<string, unknown>,
+    @Body() body?: Record<string, unknown>
+  ) {
+    // V2Board's admin JS posts `payment[name]=Stripe` as
+    // application/x-www-form-urlencoded. Fastify's default qs parser keeps
+    // the brackets in the key, so we accept all four spellings the panel
+    // might emit.
+    const name = String(
+      query.name ??
+        body?.name ??
+        (body && typeof body.payment === "object" && body.payment !== null
+          ? (body.payment as { name?: unknown }).name
+          : undefined) ??
+        body?.["payment[name]"] ??
+        ""
+    );
+    if (name !== "Stripe") {
+      // Anything other than Stripe is intentionally unsupported — return
+      // an empty schema so the admin doesn't see a stale Alipay/EPay form.
+      return dataResponse({});
     }
-    if (name === "AlipayF2F") {
-      return dataResponse({
-        appid: { label: "AppID", type: "input" },
-        private_key: { label: "Private Key", type: "textarea" },
-        public_key: { label: "Alipay Public Key", type: "textarea" }
-      });
-    }
-    if (name === "Stripe") {
-      return dataResponse({
-        stripe_public_key: { label: "Public Key", type: "input" },
-        stripe_secret_key: { label: "Secret Key", type: "input" },
-        stripe_webhook_secret: { label: "Webhook Secret", type: "input" }
-      });
-    }
-    return dataResponse({});
+    return dataResponse({
+      stripe_public_key: {
+        label: "Stripe Publishable Key (pk_...)",
+        type: "input",
+        description: "From dashboard.stripe.com → Developers → API keys"
+      },
+      stripe_secret_key: {
+        label: "Stripe Secret Key (sk_...)",
+        type: "input",
+        description: "Use a restricted key in production"
+      },
+      stripe_webhook_secret: {
+        label: "Webhook Signing Secret (whsec_...)",
+        type: "input",
+        description:
+          "Point Stripe webhook at https://<your-host>/api/v1/guest/payment/notify/Stripe/<payment-uuid> and copy the signing secret it gives you"
+      },
+      currency: {
+        label: "Currency (lowercase ISO 4217)",
+        type: "input",
+        description: "e.g. usd, hkd, cny. Defaults to usd if blank."
+      }
+    });
   }
 
   @Post("save")
@@ -528,23 +553,25 @@ export class AdminPaymentController {
 export class GuestPaymentController {
   constructor(private readonly payments: PaymentService) {}
 
+  /**
+   * Stripe webhook entry. `method` is informational (we only support
+   * Stripe); `paymentId` is the v2_payment.uuid — Stripe is configured
+   * to hit `https://<host>/api/v1/guest/payment/notify/Stripe/<uuid>`.
+   *
+   * The raw request body (Buffer) is captured by the JSON content-type
+   * parser in main.ts so we can run `stripe.webhooks.constructEvent`
+   * against the exact bytes Stripe signed.
+   */
   @All("notify/:method/:paymentId")
   async notify(
-    @Param("method") method: string,
     @Param("paymentId") paymentId: string,
-    @Req() request: FastifyRequest,
-    @Body() body: unknown,
-    @Query() query: Record<string, unknown>
+    @Req() request: FastifyRequest
   ) {
-    const headers = request.headers as Record<string, unknown>;
-    const rawBody = typeof body === "string" ? body : JSON.stringify(body);
-    const bodyObject =
-      body && typeof body === "object" ? (body as Record<string, unknown>) : (query as Record<string, unknown>);
-    return this.payments.notify(method, paymentId, {
+    const rawBody =
+      (request as unknown as { rawBody?: Buffer }).rawBody ?? Buffer.alloc(0);
+    return this.payments.notify(paymentId, {
       rawBody,
-      body: bodyObject,
-      query: query as Record<string, unknown>,
-      headers
+      headers: request.headers as Record<string, unknown>
     });
   }
 }

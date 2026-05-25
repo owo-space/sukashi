@@ -33,13 +33,17 @@ function rewriteLegacyApiV1Url(request: IncomingMessage): string {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule,
-    new FastifyAdapter({
-      trustProxy: true,
-      rewriteUrl: rewriteLegacyApiV1Url
-    })
-  );
+  const adapter = new FastifyAdapter({
+    trustProxy: true,
+    rewriteUrl: rewriteLegacyApiV1Url
+  });
+
+  // `rawBody: true` makes NestJS retain the original request bytes on
+  // `request.rawBody` while still parsing the body normally. Stripe's
+  // webhook signature verification needs the exact bytes Stripe signed.
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
+    rawBody: true
+  });
 
   await app.register(fastifyStatic, {
     root: fileURLToPath(new URL("../../../public", import.meta.url)),
