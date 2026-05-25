@@ -22,7 +22,9 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 
 COPY . .
-RUN pnpm --filter @sukashi/shared build \
+RUN find . -name '*.tsbuildinfo' -delete \
+  && pnpm --filter @sukashi/shared build \
+  && pnpm --filter @sukashi/web build \
   && pnpm --filter @sukashi/api build
 
 FROM base AS runtime

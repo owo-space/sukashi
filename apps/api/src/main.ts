@@ -9,6 +9,8 @@ import type { IncomingMessage } from "node:http";
 import { fileURLToPath } from "node:url";
 import { AppModule } from "./modules/app.module.js";
 import { HttpOkInterceptor } from "./modules/common/http-ok.interceptor.js";
+import { PanelShellService } from "./modules/panel/panel-shell.service.js";
+import { SpaFallbackFilter } from "./modules/panel/spa-fallback.filter.js";
 
 const LEGACY_API_V1_PREFIX = "/api/v1";
 
@@ -46,9 +48,15 @@ async function bootstrap() {
   });
 
   await app.register(fastifyStatic, {
-    root: fileURLToPath(new URL("../../../public", import.meta.url)),
-    prefix: "/"
+    root: fileURLToPath(new URL("../../web/dist", import.meta.url)),
+    prefix: "/",
+    wildcard: false,
+    index: false,
+    decorateReply: true
   });
+
+  const panelShell = app.get(PanelShellService);
+  app.useGlobalFilters(new SpaFallbackFilter(panelShell));
 
   app.enableCors({
     origin: true,

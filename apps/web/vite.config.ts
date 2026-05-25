@@ -1,27 +1,32 @@
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    alias: [
-      {
-        find: /^~antd\/(.*)$/,
-        replacement: "antd/$1"
-      }
-    ]
-  },
-  css: {
-    preprocessorOptions: {
-      less: {
-        javascriptEnabled: true
-      }
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url))
     }
+  },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    sourcemap: false,
+    target: "es2022"
   },
   server: {
     port: 5173,
     proxy: {
-      "/api": "http://localhost:3000"
+      "/api": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true
+      },
+      "/client/subscribe": {
+        target: "http://127.0.0.1:3000",
+        changeOrigin: true
+      }
     }
   }
 });

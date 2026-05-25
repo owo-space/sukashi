@@ -1,19 +1,33 @@
 import React from "react";
-import ReactDOM from "react-dom";
-import { ConfigProvider } from "antd";
-import zhCN from "antd/es/locale/zh_CN";
+import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App";
-import "antd/dist/antd.css";
-import "./styles/theme.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { App } from "./App";
+import { AuthProvider } from "./lib/auth";
+import "./styles/globals.css";
+import "./i18n";
 
-ReactDOM.render(
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30_000
+    }
+  }
+});
+
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("missing #root");
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN}>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </BrowserRouter>
-    </ConfigProvider>
-  </React.StrictMode>,
-  document.getElementById("root")
+    </QueryClientProvider>
+  </React.StrictMode>
 );

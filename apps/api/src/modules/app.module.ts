@@ -40,6 +40,7 @@ import {
 import { HealthController } from "./health/health.controller.js";
 import { MailService } from "./mail/mail.service.js";
 import { PanelShellController } from "./panel/panel-shell.controller.js";
+import { PanelShellService } from "./panel/panel-shell.service.js";
 import {
   PassportCommController,
   PassportController
@@ -109,6 +110,7 @@ import { StaffUserController } from "./user/staff.controller.js";
     PrismaService,
     RedisService,
     SettingsService,
+    PanelShellService,
     MailService,
     EmailOtpService,
     QuickLoginService,
