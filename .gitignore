@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+apps/*/dist/
+packages/*/dist/
+*.tsbuildinfo
+
+# Local secrets — only the example template is tracked
+.env
+.env.*
+!.env.example
+
+# Runtime / cache
+*.log
+.turbo/
+.next/
+coverage/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local artifacts
+/tmp/
+/.claude/

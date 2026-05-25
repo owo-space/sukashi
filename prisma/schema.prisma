@@ -1,0 +1,559 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum NodeProtocol {
+  SHADOWSOCKS @map("shadowsocks")
+  VLESS       @map("vless")
+  VMESS       @map("vmess")
+  TROJAN      @map("trojan")
+  HYSTERIA2   @map("hysteria2")
+  TUIC        @map("tuic")
+  ANYTLS      @map("anytls")
+  MIERU       @map("mieru")
+}
+
+model FailedJob {
+  id         BigInt   @id @default(autoincrement())
+  connection String
+  queue      String
+  payload    String
+  exception  String
+  failedAt   DateTime @default(now()) @map("failed_at") @db.Timestamptz(6)
+
+  @@map("failed_jobs")
+}
+
+model CommissionLog {
+  id           Int    @id @default(autoincrement())
+  inviteUserId Int    @map("invite_user_id")
+  userId       Int    @map("user_id")
+  tradeNo      String @map("trade_no") @db.VarChar(36)
+  orderAmount  Int    @map("order_amount")
+  getAmount    Int    @map("get_amount")
+  createdAt    Int    @map("created_at")
+  updatedAt    Int    @map("updated_at")
+
+  @@map("v2_commission_log")
+}
+
+model Coupon {
+  id               Int     @id @default(autoincrement())
+  code             String
+  name             String
+  type             Int
+  value            Int
+  show             Boolean @default(false)
+  limitUse         Int?    @map("limit_use")
+  limitUseWithUser Int?    @map("limit_use_with_user")
+  limitPlanIds     String? @map("limit_plan_ids")
+  limitPeriod      String? @map("limit_period")
+  startedAt        Int     @map("started_at")
+  endedAt          Int     @map("ended_at")
+  createdAt        Int     @map("created_at")
+  updatedAt        Int     @map("updated_at")
+
+  @@map("v2_coupon")
+}
+
+model Giftcard {
+  id          Int     @id @default(autoincrement())
+  code        String
+  name        String
+  type        Int
+  value       Int?
+  planId      Int?    @map("plan_id")
+  limitUse    Int?    @map("limit_use")
+  usedUserIds String? @map("used_user_ids") @db.VarChar(16384)
+  startedAt   Int     @map("started_at")
+  endedAt     Int     @map("ended_at")
+  createdAt   Int     @map("created_at")
+  updatedAt   Int     @map("updated_at")
+
+  @@map("v2_giftcard")
+}
+
+model InviteCode {
+  id        Int     @id @default(autoincrement())
+  userId    Int     @map("user_id")
+  code      String  @db.VarChar(32)
+  status    Int     @default(0)
+  pv        Int     @default(0)
+  createdAt Int     @map("created_at")
+  updatedAt Int     @map("updated_at")
+
+  @@map("v2_invite_code")
+}
+
+model Knowledge {
+  id        Int     @id @default(autoincrement())
+  language  String  @db.VarChar(5)
+  category  String
+  title     String
+  body      String
+  sort      Int?
+  show      Boolean @default(false)
+  createdAt Int     @map("created_at")
+  updatedAt Int     @map("updated_at")
+
+  @@map("v2_knowledge")
+}
+
+model Log {
+  id        Int     @id @default(autoincrement())
+  title     String
+  level     String? @db.VarChar(32)
+  host      String?
+  uri       String
+  method    String  @db.VarChar(16)
+  data      String?
+  ip        String? @db.VarChar(128)
+  context   String?
+  createdAt Int     @map("created_at")
+  updatedAt Int     @map("updated_at")
+
+  @@map("v2_log")
+}
+
+model MailLog {
+  id           Int     @id @default(autoincrement())
+  email        String  @db.VarChar(128)
+  subject      String
+  templateName String  @map("template_name")
+  error        String?
+  createdAt    Int     @map("created_at")
+  updatedAt    Int     @map("updated_at")
+
+  @@map("v2_mail_log")
+}
+
+model Notice {
+  id        Int     @id @default(autoincrement())
+  title     String
+  content   String
+  show      Boolean @default(false)
+  imgUrl    String? @map("img_url")
+  tags      String?
+  createdAt Int     @map("created_at")
+  updatedAt Int     @map("updated_at")
+
+  @@map("v2_notice")
+}
+
+model Order {
+  id                      Int     @id @default(autoincrement())
+  inviteUserId            Int?    @map("invite_user_id")
+  userId                  Int     @map("user_id")
+  planId                  Int     @map("plan_id")
+  couponId                Int?    @map("coupon_id")
+  paymentId               Int?    @map("payment_id")
+  type                    Int
+  period                  String
+  tradeNo                 String  @unique @map("trade_no") @db.VarChar(36)
+  callbackNo              String? @map("callback_no")
+  totalAmount             Int     @map("total_amount")
+  handlingAmount          Int?    @map("handling_amount")
+  discountAmount          Int?    @map("discount_amount")
+  surplusAmount           Int?    @map("surplus_amount")
+  refundAmount            Int?    @map("refund_amount")
+  balanceAmount           Int?    @map("balance_amount")
+  surplusOrderIds         String? @map("surplus_order_ids")
+  status                  Int     @default(0)
+  commissionStatus        Int     @default(0) @map("commission_status")
+  commissionBalance       Int     @default(0) @map("commission_balance")
+  actualCommissionBalance Int?    @map("actual_commission_balance")
+  paidAt                  Int?    @map("paid_at")
+  createdAt               Int     @map("created_at")
+  updatedAt               Int     @map("updated_at")
+
+  @@index([userId], map: "idx_order_user")
+  @@index([userId, status], map: "idx_order_user_status")
+  @@map("v2_order")
+}
+
+model Payment {
+  id                 Int      @id @default(autoincrement())
+  uuid               String   @db.VarChar(32)
+  payment            String   @db.VarChar(64)
+  name               String
+  icon               String?
+  config             Json
+  notifyDomain       String?  @map("notify_domain") @db.VarChar(128)
+  handlingFeeFixed   Int?     @map("handling_fee_fixed")
+  handlingFeePercent Decimal? @map("handling_fee_percent") @db.Decimal(5, 2)
+  enable             Boolean  @default(false)
+  sort               Int?
+  createdAt          Int      @map("created_at")
+  updatedAt          Int      @map("updated_at")
+
+  @@map("v2_payment")
+}
+
+model Plan {
+  id                 Int     @id @default(autoincrement())
+  groupId            Int     @map("group_id")
+  transferEnable     Int     @map("transfer_enable")
+  deviceLimit        Int?    @map("device_limit")
+  name               String
+  speedLimit         Int?    @map("speed_limit")
+  show               Boolean @default(false)
+  sort               Int?
+  renew              Boolean @default(true)
+  content            String?
+  monthPrice         Int?    @map("month_price")
+  quarterPrice       Int?    @map("quarter_price")
+  halfYearPrice      Int?    @map("half_year_price")
+  yearPrice          Int?    @map("year_price")
+  twoYearPrice       Int?    @map("two_year_price")
+  threeYearPrice     Int?    @map("three_year_price")
+  onetimePrice       Int?    @map("onetime_price")
+  resetPrice         Int?    @map("reset_price")
+  resetTrafficMethod Int?    @map("reset_traffic_method")
+  capacityLimit      Int?    @map("capacity_limit")
+  createdAt          Int     @map("created_at")
+  updatedAt          Int     @map("updated_at")
+
+  @@map("v2_plan")
+}
+
+model ServerGroup {
+  id        Int    @id @default(autoincrement())
+  name      String
+  createdAt Int    @map("created_at")
+  updatedAt Int    @map("updated_at")
+
+  @@map("v2_server_group")
+}
+
+model ServerRoute {
+  id          Int     @id @default(autoincrement())
+  remarks     String
+  match       Json
+  action      String  @db.VarChar(32)
+  actionValue Json?   @map("action_value")
+  createdAt   Int     @map("created_at")
+  updatedAt   Int     @map("updated_at")
+
+  @@map("v2_server_route")
+}
+
+model ServerShadowsocks {
+  id           Int     @id @default(autoincrement())
+  groupId      String  @map("group_id")
+  routeId      String? @map("route_id")
+  parentId     Int?    @map("parent_id")
+  tags         String?
+  name         String
+  rate         Decimal @db.Decimal(10, 2)
+  host         String
+  port         String  @db.VarChar(64)
+  serverPort   Int     @map("server_port")
+  cipher       String
+  obfs         String? @db.VarChar(64)
+  obfsSettings String? @map("obfs_settings")
+  show         Boolean @default(false)
+  sort         Int?
+  createdAt    Int     @map("created_at")
+  updatedAt    Int     @map("updated_at")
+
+  @@map("v2_server_shadowsocks")
+}
+
+model ServerVless {
+  id                 Int     @id @default(autoincrement())
+  groupId            String  @map("group_id")
+  routeId            String? @map("route_id")
+  name               String
+  parentId           Int?    @map("parent_id")
+  host               String
+  port               Int
+  serverPort         Int     @map("server_port")
+  tls                Int
+  tlsSettings        Json?   @map("tls_settings")
+  flow               String? @db.VarChar(64)
+  network            String  @db.VarChar(32)
+  networkSettings    Json?   @map("network_settings")
+  encryption         String? @db.VarChar(64)
+  encryptionSettings Json?   @map("encryption_settings")
+  tags               String?
+  rate               Decimal @db.Decimal(10, 2)
+  show               Boolean @default(false)
+  sort               Int?
+  createdAt          Int     @map("created_at")
+  updatedAt          Int     @map("updated_at")
+
+  @@map("v2_server_vless")
+}
+
+model ServerHysteria {
+  id           Int     @id @default(autoincrement())
+  version      Int     @default(2)
+  groupId      String  @map("group_id")
+  routeId      String? @map("route_id")
+  name         String
+  parentId     Int?    @map("parent_id")
+  host         String
+  port         String  @db.VarChar(64)
+  serverPort   Int     @map("server_port")
+  tags         String?
+  rate         Decimal @db.Decimal(10, 2)
+  show         Boolean @default(false)
+  sort         Int?
+  upMbps       Int     @map("up_mbps")
+  downMbps     Int     @map("down_mbps")
+  obfs         String? @db.VarChar(64)
+  obfsPassword String? @map("obfs_password")
+  serverName   String? @map("server_name") @db.VarChar(64)
+  insecure     Boolean @default(false)
+  createdAt    Int     @map("created_at")
+  updatedAt    Int     @map("updated_at")
+
+  @@map("v2_server_hysteria")
+}
+
+model ServerTuic {
+  id               Int     @id @default(autoincrement())
+  groupId          String  @map("group_id")
+  routeId          String? @map("route_id")
+  name             String
+  parentId         Int?    @map("parent_id")
+  host             String
+  port             String  @db.VarChar(64)
+  serverPort       Int     @map("server_port")
+  tags             String?
+  rate             Decimal @db.Decimal(10, 2)
+  show             Boolean @default(false)
+  sort             Int?
+  serverName       String? @map("server_name") @db.VarChar(64)
+  insecure         Boolean @default(false)
+  disableSni       Boolean @default(false) @map("disable_sni")
+  udpRelayMode     String? @map("udp_relay_mode") @db.VarChar(64)
+  zeroRttHandshake Boolean @default(false) @map("zero_rtt_handshake")
+  congestionControl String? @map("congestion_control") @db.VarChar(64)
+  createdAt        Int     @map("created_at")
+  updatedAt        Int     @map("updated_at")
+
+  @@map("v2_server_tuic")
+}
+
+model ServerAnytls {
+  id            Int     @id @default(autoincrement())
+  groupId       String  @map("group_id")
+  routeId       String? @map("route_id")
+  name          String
+  parentId      Int?    @map("parent_id")
+  host          String
+  port          String  @db.VarChar(64)
+  serverPort    Int     @map("server_port")
+  tags          String?
+  rate          Decimal @db.Decimal(10, 2)
+  show          Boolean @default(false)
+  sort          Int?
+  serverName    String? @map("server_name") @db.VarChar(64)
+  insecure      Boolean @default(false)
+  paddingScheme Json?   @map("padding_scheme")
+  createdAt     Int     @map("created_at")
+  updatedAt     Int     @map("updated_at")
+
+  @@map("v2_server_anytls")
+}
+
+model ServerNode {
+  id                 Int          @id @default(autoincrement())
+  groupId            String       @map("group_id")
+  routeId            String?      @map("route_id")
+  name               String
+  parentId           Int?         @map("parent_id")
+  host               String
+  listenIp           String       @default("0.0.0.0") @map("listen_ip")
+  port               String       @db.VarChar(64)
+  serverPort         Int          @map("server_port")
+  tags               String?
+  rate               Decimal      @db.Decimal(10, 2)
+  show               Boolean      @default(false)
+  sort               Int?
+  protocol           NodeProtocol
+  tls                Int
+  tlsSettings        Json?        @map("tls_settings")
+  flow               String?      @db.VarChar(64)
+  network            String       @db.VarChar(32)
+  networkSettings    Json?        @map("network_settings")
+  encryption         String?      @db.VarChar(64)
+  encryptionSettings Json?        @map("encryption_settings")
+  disableSni         Boolean      @default(false) @map("disable_sni")
+  udpRelayMode       String?      @map("udp_relay_mode") @db.VarChar(64)
+  zeroRttHandshake   Boolean      @default(false) @map("zero_rtt_handshake")
+  congestionControl  String?      @map("congestion_control") @db.VarChar(64)
+  cipher             String?      @db.VarChar(64)
+  serverKey          String?      @map("server_key") @db.VarChar(64)
+  upMbps             Int          @map("up_mbps")
+  downMbps           Int          @map("down_mbps")
+  obfs               String?      @db.VarChar(64)
+  obfsPassword       String?      @map("obfs_password")
+  paddingScheme      Json?        @map("padding_scheme")
+  mieruSettings      Json?        @map("mieru_settings")
+  insecure           Boolean      @default(false)
+  serverName         String?      @map("server_name") @db.VarChar(128)
+  createdAt          Int          @map("created_at")
+  updatedAt          Int          @map("updated_at")
+
+  @@index([protocol, show, sort])
+  @@map("v2_server_v2node")
+}
+
+model Stat {
+  id                Int    @id @default(autoincrement())
+  recordAt          Int    @unique @map("record_at")
+  recordType        String @map("record_type") @db.VarChar(1)
+  orderCount        Int    @map("order_count")
+  orderTotal        Int    @map("order_total")
+  commissionCount   Int    @map("commission_count")
+  commissionTotal   Int    @map("commission_total")
+  paidCount         Int    @map("paid_count")
+  paidTotal         Int    @map("paid_total")
+  registerCount     Int    @map("register_count")
+  inviteCount       Int    @map("invite_count")
+  transferUsedTotal String @map("transfer_used_total") @db.VarChar(32)
+  createdAt         Int    @map("created_at")
+  updatedAt         Int    @map("updated_at")
+
+  @@map("v2_stat")
+}
+
+model StatServer {
+  id          Int    @id @default(autoincrement())
+  serverId    Int    @map("server_id")
+  serverType  String @map("server_type") @db.VarChar(32)
+  u           BigInt
+  d           BigInt
+  recordType  String @map("record_type") @db.VarChar(1)
+  recordAt    Int    @map("record_at")
+  createdAt   Int    @map("created_at")
+  updatedAt   Int    @map("updated_at")
+
+  @@unique([serverId, serverType, recordAt], map: "server_id_server_type_record_at")
+  @@index([recordAt])
+  @@index([serverId])
+  @@map("v2_stat_server")
+}
+
+model StatUser {
+  id         Int     @id @default(autoincrement())
+  userId     Int     @map("user_id")
+  serverRate Decimal @map("server_rate") @db.Decimal(10, 2)
+  u          BigInt
+  d          BigInt
+  recordType String  @map("record_type") @db.VarChar(2)
+  recordAt   Int     @map("record_at")
+  createdAt  Int     @map("created_at")
+  updatedAt  Int     @map("updated_at")
+
+  @@unique([serverRate, userId, recordAt], map: "server_rate_user_id_record_at")
+  @@index([userId])
+  @@index([recordAt])
+  @@index([serverRate])
+  @@map("v2_stat_user")
+}
+
+model Ticket {
+  id          Int    @id @default(autoincrement())
+  userId      Int    @map("user_id")
+  subject     String
+  level       Int
+  status      Int    @default(0)
+  replyStatus Int    @default(0) @map("reply_status")
+  createdAt   Int    @map("created_at")
+  updatedAt   Int    @map("updated_at")
+
+  @@map("v2_ticket")
+}
+
+model TicketMessage {
+  id        Int    @id @default(autoincrement())
+  userId    Int    @map("user_id")
+  ticketId  Int    @map("ticket_id")
+  message   String
+  createdAt Int    @map("created_at")
+  updatedAt Int    @map("updated_at")
+
+  @@map("v2_ticket_message")
+}
+
+model User {
+  id                Int     @id @default(autoincrement())
+  inviteUserId      Int?    @map("invite_user_id")
+  telegramId        BigInt? @map("telegram_id")
+  email             String  @unique @db.VarChar(128)
+  password          String  @db.VarChar(255)
+  passwordAlgo      String? @map("password_algo") @db.VarChar(32)
+  passwordSalt      String? @map("password_salt") @db.VarChar(32)
+  balance           Int     @default(0)
+  discount          Int?
+  commissionType    Int     @default(0) @map("commission_type")
+  commissionRate    Int?    @map("commission_rate")
+  commissionBalance Int     @default(0) @map("commission_balance")
+  t                 Int     @default(0)
+  u                 BigInt  @default(0)
+  d                 BigInt  @default(0)
+  transferEnable    BigInt  @default(0) @map("transfer_enable")
+  deviceLimit       Int?    @map("device_limit")
+  banned            Boolean @default(false)
+  isAdmin           Boolean @default(false) @map("is_admin")
+  lastLoginAt       Int?    @map("last_login_at")
+  isStaff           Boolean @default(false) @map("is_staff")
+  lastLoginIp       String? @map("last_login_ip") @db.VarChar(128)
+  uuid              String  @unique @db.VarChar(36)
+  groupId           Int?    @map("group_id")
+  planId            Int?    @map("plan_id")
+  speedLimit        Int?    @map("speed_limit")
+  autoRenewal       Boolean @default(false) @map("auto_renewal")
+  remindExpire      Boolean @default(true) @map("remind_expire")
+  remindTraffic     Boolean @default(true) @map("remind_traffic")
+  token             String  @unique @db.VarChar(64)
+  expiredAt         BigInt? @map("expired_at")
+  remarks           String?
+  createdAt         Int     @map("created_at")
+  updatedAt         Int     @map("updated_at")
+
+  @@map("v2_user")
+}
+
+model Setting {
+  key       String @id @db.VarChar(64)
+  value     String?
+  createdAt Int    @map("created_at")
+  updatedAt Int    @map("updated_at")
+
+  @@map("v2_settings")
+}
+
+model UserSession {
+  id         String @id @db.VarChar(64)
+  userId     Int    @map("user_id")
+  authData   String @map("auth_data")
+  ip         String? @db.VarChar(128)
+  userAgent  String? @map("user_agent")
+  createdAt  Int    @map("created_at")
+  lastUsedAt Int    @map("last_used_at")
+
+  @@index([userId])
+  @@map("v2_user_session")
+}
+
+model UserAliveIp {
+  id         Int    @id @default(autoincrement())
+  userId     Int    @map("user_id")
+  nodeType   String @map("node_type") @db.VarChar(32)
+  nodeId     Int    @map("node_id")
+  ip         String @db.VarChar(128)
+  recordedAt Int    @map("recorded_at")
+
+  @@unique([userId, nodeType, nodeId, ip], map: "uniq_user_alive_node_ip")
+  @@index([userId])
+  @@index([recordedAt])
+  @@map("v2_user_alive_ip")
+}

@@ -1,0 +1,22 @@
+{
+  "name": "sukashi",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev:api": "pnpm --filter @sukashi/api dev",
+    "dev:panel": "pnpm --filter @sukashi/api dev",
+    "dev:web-source": "pnpm --filter @sukashi/web dev",
+    "build": "pnpm --filter @sukashi/shared build && pnpm --filter @sukashi/api build && pnpm --filter @sukashi/web build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm build && node --test tests/*.test.mjs",
+    "prisma:generate": "pnpm --filter @sukashi/api prisma:generate"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@prisma/client": "7.8.0",
+    "prisma": "7.8.0"
+  }
+}
