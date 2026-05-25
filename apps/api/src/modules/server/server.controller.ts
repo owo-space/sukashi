@@ -77,6 +77,15 @@ function unixNow(): number {
   return unixNowFn();
 }
 
+function startOfDayUnix(): number {
+  // Matches PHP's strtotime(date('Y-m-d')) — start of today in the server's
+  // local timezone. Both panel and PHP V2Board use server-local TZ for
+  // stat record_at, so daily rows align across migrations.
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return Math.floor(date.getTime() / 1000);
+}
+
 const ALIVE_TTL_SECONDS = 120;
 
 function requestPath(request: FastifyRequest): string {
@@ -530,18 +539,50 @@ export class ServerController {
     if (!tokenResult) return;
     const node = await this.queryServerNode(query);
     if (node) await this.nodeStatus.touchPush(node.id, Object.keys(body ?? {}).length);
-    await Promise.all(
-      Object.entries(body ?? {}).map(([userId, traffic]) => {
+
+    const entries = Object.entries(body ?? {})
+      .map(([userId, traffic]) => {
+        const id = Number(userId);
+        if (!Number.isInteger(id) || id <= 0) return null;
         const [upload = 0, download = 0] = Array.isArray(traffic) ? traffic : [];
-        return this.prisma.user.updateMany({
-          where: { id: Number(userId) },
-          data: {
-            u: { increment: BigInt(upload) },
-            d: { increment: BigInt(download) }
-          }
-        });
+        return { id, upload: BigInt(upload), download: BigInt(download) };
       })
+      .filter((entry): entry is { id: number; upload: bigint; download: bigint } => entry !== null);
+
+    // 1) Running totals on v2_user (used by isAvailable / subscription headers).
+    await Promise.all(
+      entries.map((entry) =>
+        this.prisma.user.updateMany({
+          where: { id: entry.id },
+          data: {
+            u: { increment: entry.upload },
+            d: { increment: entry.download },
+            t: unixNow()
+          }
+        })
+      )
     );
+
+    // 2) Daily per-user aggregate to v2_stat_user (matches V2Board's
+    //    StatUserJob). The user-side 流量明细 page reads from here, keyed
+    //    by (server_rate, user_id, record_at=start-of-day). Without these
+    //    rows the traffic log stays empty even though running totals grow.
+    if (node && entries.length > 0) {
+      const recordAt = startOfDayUnix();
+      const rate = Number(node.rate ?? 1);
+      await this.prisma.$transaction(
+        entries.map((entry) =>
+          this.prisma.$executeRaw`
+            INSERT INTO v2_stat_user (user_id, server_rate, u, d, record_type, record_at, created_at, updated_at)
+            VALUES (${entry.id}, ${rate}, ${entry.upload}, ${entry.download}, 'd', ${recordAt}, ${unixNow()}, ${unixNow()})
+            ON CONFLICT (server_rate, user_id, record_at) DO UPDATE
+              SET u = v2_stat_user.u + EXCLUDED.u,
+                  d = v2_stat_user.d + EXCLUDED.d,
+                  updated_at = EXCLUDED.updated_at
+          `
+        )
+      );
+    }
     return reply.send(true);
   }
 

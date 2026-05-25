@@ -500,16 +500,25 @@ export class UserStatController {
   @Get("getTrafficLog")
   async getTrafficLog(@Req() request: FastifyRequest) {
     const me = await this.authService.requireUser(extractAuthorization(request));
+    // V2Board returns every row from the start of the current month, ordered
+    // newest-first. The user-side traffic page does its own grouping by
+    // date; truncating to N rows breaks the per-day totals.
+    const monthStart = (() => {
+      const d = new Date();
+      d.setDate(1);
+      d.setHours(0, 0, 0, 0);
+      return Math.floor(d.getTime() / 1000);
+    })();
     const records = await this.prisma.statUser.findMany({
-      where: { userId: me.id },
-      orderBy: { recordAt: "desc" },
-      take: 30
+      where: { userId: me.id, recordAt: { gte: monthStart } },
+      orderBy: { recordAt: "desc" }
     });
     return dataResponse(
       records.map((row) => ({
         record_at: row.recordAt,
         u: row.u,
         d: row.d,
+        user_id: row.userId,
         server_rate: row.serverRate
       }))
     );
