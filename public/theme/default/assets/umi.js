@@ -17894,12 +17894,14 @@
                     })
                 }, Object(p["formatMessage"])({
                     id: "\u6309\u6d41\u91cf"
-                })))), e.length <= 0 ? a.a.createElement("div", {
+                })))), this.props.plan.fetchLoading ? a.a.createElement("div", {
                     className: "spinner-grow text-primary",
                     role: "status"
                 }, a.a.createElement("span", {
                     className: "sr-only"
-                }, "Loading...")) : a.a.createElement("div", {
+                }, "Loading...")) : e.length <= 0 ? a.a.createElement("div", {
+                    className: "text-center text-muted py-5"
+                }, "\u6682\u65f6\u6ca1\u6709\u4efb\u4f55\u53ef\u8d2d\u7684\u8ba1\u5212") : a.a.createElement("div", {
                     className: "row"
                 }, e.filter(e=>{
                     return !this.state.tabs || (!(1 !== this.state.tabs || !(e.month_price || e.quarter_price || e.half_year_price || e.year_price || e.two_year_price || e.three_year_price)) || (!(2 !== this.state.tabs || !e.onetime_price) || void 0))
