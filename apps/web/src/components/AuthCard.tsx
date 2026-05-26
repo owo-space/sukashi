@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useApplyTheme, useTheme } from "@/lib/theme";
 
 export function AuthCard({
@@ -15,7 +15,7 @@ export function AuthCard({
   const hasBg = Boolean(theme.frontend_background_url);
   return (
     <div
-      className={`flex min-h-screen items-center justify-center px-4 py-10 ${hasBg ? "" : "bg-[#e8eaf0]"}`}
+      className={`relative flex min-h-screen items-center justify-center px-4 py-10 ${hasBg ? "" : "bg-[#e8eaf0]"}`}
       style={
         hasBg
           ? {
@@ -27,6 +27,9 @@ export function AuthCard({
           : undefined
       }
     >
+      <div className="absolute right-4 top-4">
+        <LanguageSwitcher />
+      </div>
       <Card
         className={`w-full max-w-md overflow-hidden p-0 shadow-lg backdrop-blur ${
           hasBg ? "bg-white/70 ring-white/40" : "bg-white"
@@ -39,10 +42,7 @@ export function AuthCard({
         <div className="px-8 pb-6 pt-4">{children}</div>
         <div className="flex items-center justify-between border-t bg-muted/30 px-8 py-3 text-sm text-muted-foreground">
           <div>{footerLeft}</div>
-          <div className="flex items-center gap-1">
-            <Globe className="size-4" />
-            <span>简体中文</span>
-          </div>
+          <div />
         </div>
       </Card>
     </div>

@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 import { gravatarUrl } from "@/lib/gravatar";
@@ -28,6 +30,7 @@ export function HeaderBar({
   onMenuClick?: () => void;
 }) {
   const { logout, isAdmin } = useAuth();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { data } = useQuery({
     queryKey: ["user.info"],
@@ -57,7 +60,7 @@ export function HeaderBar({
         {onMenuClick ? (
           <button
             type="button"
-            aria-label="菜单"
+            aria-label={t("菜单")}
             onClick={onMenuClick}
             className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 md:hidden [html[data-header=dark]_&]:text-white/80 [html[data-header=dark]_&]:hover:bg-white/10"
           >
@@ -68,12 +71,13 @@ export function HeaderBar({
           {title}
         </h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <LanguageSwitcher />
         {settingsHref ? (
           <Link
             to={settingsHref}
             className="text-slate-500 hover:text-slate-700 [html[data-header=dark]_&]:text-white/70 [html[data-header=dark]_&]:hover:text-white"
-            aria-label="设置"
+            aria-label={t("设置")}
           >
             <Settings className="size-4" strokeWidth={1.75} />
           </Link>
@@ -102,12 +106,12 @@ export function HeaderBar({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             {isAdmin ? (
-              <DropdownMenuItem onClick={() => navigate("/")}>用户面板</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/")}>{t("用户面板")}</DropdownMenuItem>
             ) : null}
             {isAdmin ? (
-              <DropdownMenuItem onClick={() => navigate("/admin")}>管理面板</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/admin")}>{t("管理面板")}</DropdownMenuItem>
             ) : null}
-            <DropdownMenuItem onClick={() => navigate("/profile")}>个人中心</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>{t("个人中心")}</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
@@ -116,7 +120,7 @@ export function HeaderBar({
               }}
             >
               <LogOut className="size-4" />
-              退出登录
+              {t("退出登录")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
