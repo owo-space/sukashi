@@ -47,7 +47,14 @@ export class UserOrderController {
       where,
       orderBy: { createdAt: "desc" }
     });
-    return dataResponse(orders);
+    const planIds = Array.from(new Set(orders.map((o) => o.planId)));
+    const plans = planIds.length
+      ? await this.prisma.plan.findMany({ where: { id: { in: planIds } } })
+      : [];
+    const planById = new Map(plans.map((p) => [p.id, p]));
+    return dataResponse(
+      orders.map((o) => ({ ...o, plan: planById.get(o.planId) ?? null }))
+    );
   }
 
   @Get("detail")

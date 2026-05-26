@@ -2,12 +2,12 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CreditCard } from "lucide-react";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import type { Order, Plan } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { formatCny, formatUnixDate } from "@/lib/format";
 
 interface PaymentMethod {
@@ -16,6 +16,14 @@ interface PaymentMethod {
   payment: string;
   icon?: string | null;
 }
+
+const STATUS_LABEL: Record<number, { label: string; cls: string }> = {
+  0: { label: "待支付", cls: "bg-primary text-primary-foreground" },
+  1: { label: "已支付", cls: "bg-emerald-500 text-white" },
+  2: { label: "已取消", cls: "bg-slate-300 text-slate-700" },
+  3: { label: "已完成", cls: "bg-emerald-500 text-white" },
+  4: { label: "已折扣", cls: "bg-indigo-500 text-white" }
+};
 
 export function UserOrderDetailPage() {
   const { tradeNo } = useParams();
@@ -47,6 +55,8 @@ export function UserOrderDetailPage() {
     },
     onSuccess: (res) => {
       if (typeof res === "object" && res && "type" in res && res.type === "url") {
+        // hosted Stripe Checkout — redirect immediately so the user lands
+        // on the payment page automatically after creating the order.
         window.location.href = res.data;
       } else if (res === true) {
         toast.success("订单已完成");
@@ -75,60 +85,71 @@ export function UserOrderDetailPage() {
   }, [order?.status]);
 
   if (isLoading || !order) return <Skeleton className="h-64 w-full" />;
-
-  const statusLabel: Record<number, string> = {
-    0: "待支付",
-    1: "处理中",
-    2: "已取消",
-    3: "已完成",
-    4: "已折扣"
-  };
+  const status = STATUS_LABEL[order.status] ?? { label: String(order.status), cls: "bg-slate-300" };
+  const list = methods ?? [];
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-base font-medium">订单详情</CardTitle>
+      <Card className="rounded border-slate-200 lg:col-span-2">
+        <CardHeader className="border-b border-slate-100 py-3">
+          <CardTitle className="text-sm font-medium text-slate-700">订单详情</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm space-y-3">
-          <Row label="订单号" value={<span className="font-mono text-xs">{order.trade_no}</span>} />
+        <CardContent className="py-4 text-sm">
+          <Row label="订单号" value={<span className="font-mono text-xs">{order.trade_no ?? "—"}</span>} />
           <Row label="订阅" value={order.plan?.name ?? "—"} />
-          <Row label="状态" value={<Badge>{statusLabel[order.status] ?? order.status}</Badge>} />
+          <Row
+            label="状态"
+            value={
+              <span className={`inline-flex items-center rounded-full px-3 py-0.5 text-xs ${status.cls}`}>
+                {status.label}
+              </span>
+            }
+          />
           <Row label="金额" value={<>¥ {formatCny(order.total_amount)}</>} />
-          <Row label="创建时间" value={formatUnixDate(order.created_at)} />
+          <Row label="创建时间" value={formatUnixDate(order.created_at)} last />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-medium">支付</CardTitle>
+      <Card className="rounded border-slate-200">
+        <CardHeader className="border-b border-slate-100 py-3">
+          <CardTitle className="text-sm font-medium text-slate-700">支付</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3 py-4">
           {order.status === 0 ? (
             <>
-              {(methods ?? []).map((m) => (
-                <Button
-                  key={m.id}
-                  variant="outline"
-                  onClick={() => checkout.mutate(m.id)}
-                  disabled={checkout.isPending}
-                  className="justify-between"
-                >
-                  <span>{m.name}</span>
-                  <span className="text-xs text-muted-foreground">{m.payment}</span>
-                </Button>
-              ))}
-              {(methods ?? []).length === 0 ? (
+              {list.length === 0 ? (
                 <div className="text-sm text-muted-foreground">暂无可用支付方式</div>
-              ) : null}
-              <Button
-                variant="ghost"
+              ) : list.length === 1 ? (
+                <Button
+                  onClick={() => checkout.mutate(list[0]!.id)}
+                  disabled={checkout.isPending}
+                  className="w-full"
+                >
+                  <CreditCard className="size-4" />
+                  {checkout.isPending ? "跳转中…" : `立即支付 (${list[0]!.name})`}
+                </Button>
+              ) : (
+                list.map((m) => (
+                  <Button
+                    key={m.id}
+                    variant="outline"
+                    onClick={() => checkout.mutate(m.id)}
+                    disabled={checkout.isPending}
+                    className="w-full justify-between"
+                  >
+                    <span>{m.name}</span>
+                    <span className="text-xs text-muted-foreground">{m.payment}</span>
+                  </Button>
+                ))
+              )}
+              <button
+                type="button"
                 onClick={() => cancel.mutate()}
                 disabled={cancel.isPending}
-                className="text-destructive"
+                className="w-full py-2 text-sm text-destructive hover:underline"
               >
                 取消订单
-              </Button>
+              </button>
             </>
           ) : (
             <div className="text-sm text-muted-foreground">此订单无需再支付。</div>
@@ -139,10 +160,18 @@ export function UserOrderDetailPage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({
+  label,
+  value,
+  last
+}: {
+  label: string;
+  value: React.ReactNode;
+  last?: boolean;
+}) {
   return (
-    <div className="flex justify-between border-b last:border-0 pb-2 last:pb-0">
-      <span className="text-muted-foreground">{label}</span>
+    <div className={`flex justify-between ${last ? "" : "border-b border-slate-100 pb-2.5 mb-2.5"}`}>
+      <span className="text-slate-500">{label}</span>
       <span>{value}</span>
     </div>
   );

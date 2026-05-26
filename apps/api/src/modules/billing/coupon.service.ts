@@ -56,10 +56,12 @@ export class CouponService {
       }
     }
 
-    // type: 1 = fixed-amount discount (value in 分), 2 = percentage discount (value as %)
+    // V2Board convention:
+    //   type 1 = percentage discount (value is %, 0-100)
+    //   type 2 = fixed-amount discount (value in 分)
     let discount = 0;
-    if (coupon.type === 1) discount = Math.min(coupon.value, totalAmount);
-    if (coupon.type === 2) discount = Math.floor(totalAmount * (coupon.value / 100));
+    if (coupon.type === 1) discount = Math.floor(totalAmount * (coupon.value / 100));
+    if (coupon.type === 2) discount = Math.min(coupon.value, totalAmount);
     if (discount < 0) discount = 0;
     if (discount > totalAmount) discount = totalAmount;
 

@@ -64,11 +64,27 @@ export function UserPlanDetailPage() {
   const create = useMutation({
     mutationFn: async () => {
       if (!period) throw new Error("请选择购买周期");
-      return apiPost<string>("/user/order/save", {
+      const tradeNo = await apiPost<string>("/user/order/save", {
         plan_id: planId,
         period,
         coupon_code: coupon || undefined
       });
+      if (!tradeNo) throw new Error("订单创建失败");
+      // immediately try checkout — Sukashi is Stripe-only so the user can
+      // skip the intermediate order-detail page when there's a single
+      // active gateway.
+      const methods = await apiGet<Array<{ id: number; name: string }>>("/user/order/getPaymentMethod");
+      if (Array.isArray(methods) && methods.length === 1) {
+        const res = await apiPost<{ type: string; data: string } | boolean>(
+          "/user/order/checkout",
+          { trade_no: tradeNo, method: methods[0]!.id }
+        );
+        if (typeof res === "object" && res && "type" in res && res.type === "url") {
+          window.location.href = res.data;
+          return tradeNo;
+        }
+      }
+      return tradeNo;
     },
     onSuccess: (tradeNo) => {
       toast.success("订单已创建");
