@@ -6,7 +6,7 @@ test.describe("Auth gating (no login required)", () => {
     const page = await ctx.newPage();
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/login/);
-    await expect(page.getByText(/邮箱/)).toBeVisible();
+    await expect(page.getByPlaceholder(/邮箱/)).toBeVisible();
     await ctx.close();
   });
 
@@ -14,9 +14,9 @@ test.describe("Auth gating (no login required)", () => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await page.goto("/login");
-    await expect(page.getByText(/邮箱/)).toBeVisible();
-    await expect(page.getByText(/密码/).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /^登入$/ })).toBeVisible();
+    await expect(page.getByPlaceholder(/邮箱/)).toBeVisible();
+    await expect(page.getByPlaceholder(/密码/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /登入/ })).toBeVisible();
     await ctx.close();
   });
 });

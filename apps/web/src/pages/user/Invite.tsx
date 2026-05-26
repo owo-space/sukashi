@@ -10,7 +10,7 @@ export function InvitePage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["user", "invite", "details"],
-    queryFn: () => apiGet<InviteStat>("/user/invite/details")
+    queryFn: () => apiGet<InviteStat | unknown[]>("/user/invite/details")
   });
   const { data: logs } = useQuery({
     queryKey: ["user", "invite", "commissionLog"],
@@ -21,8 +21,10 @@ export function InvitePage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["user", "invite"] })
   });
 
-  if (isLoading || !data) return <Skeleton active />;
-  const [activeCodes, invitedUsers, commissionCount, commissionTotal] = data.stat;
+  if (isLoading) return <Skeleton active />;
+  const normalized: InviteStat =
+    data && !Array.isArray(data) ? (data as InviteStat) : { codes: [], stat: [0, 0, 0, 0] };
+  const [activeCodes, invitedUsers, commissionCount, commissionTotal] = normalized.stat;
 
   return (
     <div>
@@ -54,7 +56,7 @@ export function InvitePage() {
       >
         <Table
           rowKey="id"
-          dataSource={data.codes}
+          dataSource={normalized.codes}
           pagination={false}
           columns={[
             {
