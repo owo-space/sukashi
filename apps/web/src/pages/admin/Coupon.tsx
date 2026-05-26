@@ -26,6 +26,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { RowActions } from "@/components/admin/RowActions";
 import { DataDrawer } from "@/components/admin/DataDrawer";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
 
@@ -319,17 +320,15 @@ export function AdminCouponPage() {
             </Field>
           </div>
           <Field label="开始时间" required>
-            <Input
-              type="datetime-local"
+            <DateTimePicker
               value={String(form.started_at ?? "")}
-              onChange={(e) => setForm((f) => ({ ...f, started_at: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, started_at: v }))}
             />
           </Field>
           <Field label="结束时间" required>
-            <Input
-              type="datetime-local"
+            <DateTimePicker
               value={String(form.ended_at ?? "")}
-              onChange={(e) => setForm((f) => ({ ...f, ended_at: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, ended_at: v }))}
             />
           </Field>
           <Field label="对外显示">

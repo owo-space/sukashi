@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -95,12 +95,21 @@ export function UserPlanDetailPage() {
     }
   });
 
-  if (isLoading || !data) return <Skeleton className="h-96 w-full" />;
+  // The list of period options exposed by this plan (skip those with no price).
+  const offered = data
+    ? PERIODS.filter((p) => {
+        const v = data[p.key] as number | null | undefined;
+        return v != null && v > 0;
+      })
+    : [];
 
-  const offered = PERIODS.filter((p) => {
-    const v = data[p.key] as number | null | undefined;
-    return v != null && v > 0;
-  });
+  // Default-select the first offered period the moment the plan loads,
+  // so the user can hit 下单 immediately without explicitly picking one.
+  useEffect(() => {
+    if (!period && offered.length > 0) setPeriod(offered[0]!.key as string);
+  }, [period, offered]);
+
+  if (isLoading || !data) return <Skeleton className="h-96 w-full" />;
   const currentPrice =
     period && (data[period as keyof Plan] as number | null | undefined)
       ? (data[period as keyof Plan] as number)

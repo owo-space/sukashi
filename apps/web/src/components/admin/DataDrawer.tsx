@@ -41,6 +41,7 @@ export function DataDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
+        showCloseButton={false}
         className={cn("flex flex-col gap-0 p-0 sm:max-w-none")}
         style={{ width }}
       >

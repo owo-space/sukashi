@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   Select,
   SelectContent,
@@ -231,17 +232,15 @@ export function AdminGiftcardPage() {
             />
           </Field>
           <Field label="开始时间" required>
-            <Input
-              type="datetime-local"
+            <DateTimePicker
               value={String(form.started_at ?? "")}
-              onChange={(e) => setForm((f) => ({ ...f, started_at: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, started_at: v }))}
             />
           </Field>
           <Field label="结束时间" required>
-            <Input
-              type="datetime-local"
+            <DateTimePicker
               value={String(form.ended_at ?? "")}
-              onChange={(e) => setForm((f) => ({ ...f, ended_at: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, ended_at: v }))}
             />
           </Field>
         </div>
