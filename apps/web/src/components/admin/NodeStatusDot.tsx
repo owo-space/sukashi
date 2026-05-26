@@ -1,13 +1,12 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Mirrors the legacy panel's tri-color liveness dot.
+ * Legacy tri-color liveness dot — pure 8px circle, no inline text. The
+ * text shows in `title` on hover only.
  *
  *   0  →  red    离线/未连接 (no pull check in the last 5 min)
- *   1  →  yellow 已连接但无流量上报 (controller pulled but no traffic push)
- *   2  →  green  正常运行 (actively pushing traffic)
- *
- * Falls back to red for null/undefined.
+ *   1  →  yellow 已连接,无流量上报
+ *   2  →  green  正常运行
  */
 export function NodeStatusDot({
   availableStatus,
@@ -18,7 +17,6 @@ export function NodeStatusDot({
   isOnline?: number | boolean | null;
   className?: string;
 }) {
-  // Allow callers that only have legacy is_online to still render something.
   const status =
     availableStatus == null
       ? isOnline
@@ -34,21 +32,8 @@ export function NodeStatusDot({
         : "bg-rose-500";
   return (
     <span
-      className={cn("inline-flex items-center gap-1.5 text-xs", className)}
       title={label}
-    >
-      <span
-        className={cn("inline-block size-2.5 rounded-full ring-2 ring-offset-1", color)}
-        style={{
-          boxShadow:
-            status === 2
-              ? "0 0 6px color-mix(in oklab, var(--color-emerald-500) 70%, transparent)"
-              : status === 1
-                ? "0 0 6px color-mix(in oklab, var(--color-amber-400) 70%, transparent)"
-                : "0 0 6px color-mix(in oklab, var(--color-rose-500) 70%, transparent)"
-        }}
-      />
-      <span className="text-muted-foreground">{label}</span>
-    </span>
+      className={cn("inline-block size-2 rounded-full align-middle", color, className)}
+    />
   );
 }

@@ -95,19 +95,28 @@ export function FormDialog({
               );
             }
             if (f.type === "select") {
+              // Radix Select forbids SelectItem with value="". We use the
+              // sentinel "__empty__" to render an "unselect" choice and
+              // translate back to "" on change.
+              const SENTINEL = "__empty__";
+              const display =
+                value == null || value === "" ? SENTINEL : String(value);
               return (
                 <div key={f.key} className={`flex flex-col gap-1.5 ${wrap}`}>
                   <Label htmlFor={f.key}>{f.label}</Label>
                   <Select
-                    value={value == null ? "" : String(value)}
-                    onValueChange={(v) => onChange(f.key, v)}
+                    value={display}
+                    onValueChange={(v) => onChange(f.key, v === SENTINEL ? "" : v)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={f.placeholder ?? "请选择"} />
                     </SelectTrigger>
                     <SelectContent>
                       {(f.options ?? []).map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
+                        <SelectItem
+                          key={opt.value || SENTINEL}
+                          value={opt.value === "" ? SENTINEL : opt.value}
+                        >
                           {opt.label}
                         </SelectItem>
                       ))}
