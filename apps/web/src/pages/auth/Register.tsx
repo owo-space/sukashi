@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { Smile } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 
@@ -23,6 +23,7 @@ export function RegisterPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [inviteCode, setInviteCode] = useState(inviteFromUrl);
   const [emailCode, setEmailCode] = useState("");
   const [sendingCode, setSendingCode] = useState(false);
@@ -53,9 +54,7 @@ export function RegisterPage() {
       await apiPost("/passport/comm/sendEmailVerify", { email: email.trim() });
       toast.success("验证码已发送");
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : "发送失败";
-      toast.error(msg);
+      toast.error(err instanceof ApiError ? err.message : (err as Error).message);
     } finally {
       setSendingCode(false);
     }
@@ -65,6 +64,10 @@ export function RegisterPage() {
     e.preventDefault();
     if (!email || !password) {
       toast.error("请填邮箱和密码");
+      return;
+    }
+    if (password !== passwordConfirm) {
+      toast.error("两次密码不一致");
       return;
     }
     setSubmitting(true);
@@ -77,9 +80,7 @@ export function RegisterPage() {
       });
       navigate(r.is_admin ? "/admin" : "/dashboard", { replace: true });
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : err instanceof Error ? err.message : "注册失败";
-      toast.error(msg);
+      toast.error(err instanceof ApiError ? err.message : (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -89,71 +90,73 @@ export function RegisterPage() {
   const inviteRequired = Boolean(config?.is_invite_force);
 
   return (
-    <AuthCard title="注册">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">邮箱</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
+    <AuthCard
+      footerLeft={
+        <Link to="/login" className="hover:text-primary">
+          返回登入
+        </Link>
+      }
+    >
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <Input
+          type="email"
+          autoComplete="username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="邮箱"
+          className="h-10 bg-muted/50"
+          required
+        />
         {needEmailCode ? (
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="emailCode">邮箱验证码</Label>
-            <div className="flex gap-2">
-              <Input
-                id="emailCode"
-                value={emailCode}
-                onChange={(e) => setEmailCode(e.target.value)}
-                required
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={sendEmailCode}
-                disabled={sendingCode}
-              >
-                {sendingCode ? "发送中…" : "获取验证码"}
-              </Button>
-            </div>
+          <div className="flex gap-2">
+            <Input
+              value={emailCode}
+              onChange={(e) => setEmailCode(e.target.value)}
+              placeholder="邮箱验证码"
+              className="h-10 bg-muted/50"
+              required
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={sendEmailCode}
+              disabled={sendingCode}
+              className="h-10"
+            >
+              {sendingCode ? "发送中…" : "获取验证码"}
+            </Button>
           </div>
         ) : null}
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">密码</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="invite">
-            邀请码{inviteRequired ? "" : "（可选）"}
-          </Label>
-          <Input
-            id="invite"
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
-            required={inviteRequired}
-          />
-        </div>
-        <Button type="submit" disabled={submitting} className="mt-1">
+        <Input
+          type="password"
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="密码"
+          className="h-10 bg-muted/50"
+          required
+        />
+        <Input
+          type="password"
+          autoComplete="new-password"
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          placeholder="密码"
+          className="h-10 bg-muted/50"
+          required
+        />
+        <Input
+          value={inviteCode}
+          onChange={(e) => setInviteCode(e.target.value)}
+          placeholder={inviteRequired ? "邀请码" : "邀请码(选填)"}
+          className="h-10 bg-muted/50"
+          required={inviteRequired}
+        />
+        <Button type="submit" disabled={submitting} className="mt-1 h-10 text-base font-medium">
+          <Smile className="size-4" />
           {submitting ? "注册中…" : "注册"}
         </Button>
-        <div className="text-sm text-muted-foreground text-center">
-          已有账号？
-          <Link to="/login" className="ml-1 hover:text-primary">
-            去登录
-          </Link>
-        </div>
       </form>
     </AuthCard>
   );

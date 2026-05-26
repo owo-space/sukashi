@@ -21,7 +21,8 @@ type SukadProtocol =
   | "hysteria2"
   | "tuic"
   | "anytls"
-  | "mieru";
+  | "mieru"
+  | "snell";
 
 type QueryValue = string | string[] | undefined;
 
@@ -52,7 +53,8 @@ const SUKAD_PROTOCOLS = new Set<SukadProtocol>([
   "tuic",
   "vless",
   "vmess",
-  "mieru"
+  "mieru",
+  "snell"
 ]);
 
 const PRISMA_PROTOCOL_BY_SUKAD: Record<SukadProtocol, string> = {
@@ -63,7 +65,8 @@ const PRISMA_PROTOCOL_BY_SUKAD: Record<SukadProtocol, string> = {
   tuic: "TUIC",
   vless: "VLESS",
   vmess: "VMESS",
-  mieru: "MIERU"
+  mieru: "MIERU",
+  snell: "SNELL"
 };
 
 const SUKAD_PROTOCOL_BY_PRISMA = Object.fromEntries(

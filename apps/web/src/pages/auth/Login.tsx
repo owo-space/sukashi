@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
+import { LogIn } from "lucide-react";
 import { AuthCard } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth";
 import { ApiError } from "@/lib/api";
 
@@ -42,42 +42,42 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard title="登录">
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">邮箱</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">密码</Label>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <Button type="submit" disabled={submitting} className="mt-1">
-          {submitting ? "登录中…" : "登录"}
-        </Button>
-        <div className="flex justify-between text-sm text-muted-foreground">
+    <AuthCard
+      footerLeft={
+        <div className="flex items-center gap-2">
           <Link to="/register" className="hover:text-primary">
-            注册账号
+            注册
           </Link>
+          <span className="text-muted-foreground/50">|</span>
           <Link to="/forget" className="hover:text-primary">
-            忘记密码？
+            忘记密码
           </Link>
         </div>
+      }
+    >
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <Input
+          type="email"
+          autoComplete="username"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="邮箱"
+          className="h-10 bg-muted/50"
+          required
+        />
+        <Input
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="密码"
+          className="h-10 bg-muted/50"
+          required
+        />
+        <Button type="submit" disabled={submitting} className="mt-1 h-10 text-base font-medium">
+          <LogIn className="size-4" />
+          {submitting ? "登录中…" : "登入"}
+        </Button>
       </form>
     </AuthCard>
   );

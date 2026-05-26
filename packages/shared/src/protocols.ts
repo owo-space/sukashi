@@ -2,6 +2,7 @@ export const RETAINED_NODE_PROTOCOLS = [
   "anytls",
   "hysteria2",
   "shadowsocks",
+  "snell",
   "trojan",
   "tuic",
   "vless",

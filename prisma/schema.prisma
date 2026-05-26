@@ -15,6 +15,7 @@ enum NodeProtocol {
   TUIC        @map("tuic")
   ANYTLS      @map("anytls")
   MIERU       @map("mieru")
+  SNELL       @map("snell")
 }
 
 model FailedJob {

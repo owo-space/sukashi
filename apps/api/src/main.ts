@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import fastifyStatic from "@fastify/static";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import {
@@ -10,6 +10,7 @@ import {
 import type { IncomingMessage } from "node:http";
 import { AppModule } from "./modules/app.module.js";
 import { HttpOkInterceptor } from "./modules/common/http-ok.interceptor.js";
+import { SpaFallbackFilter } from "./modules/panel/spa-fallback.filter.js";
 
 const LEGACY_API_V1_PREFIX = "/api/v1";
 
@@ -45,39 +46,12 @@ async function bootstrap() {
 
   const publicDir = fileURLToPath(new URL("../../../public", import.meta.url));
   const webDist = fileURLToPath(new URL("../../web/dist", import.meta.url));
+  const roots: string[] = [publicDir];
+  if (existsSync(webDist)) roots.push(webDist);
 
   await app.register(fastifyStatic, {
-    root: publicDir,
+    root: roots,
     prefix: "/"
-  });
-
-  // Serve the Vite build's hashed assets and fonts at the same paths the
-  // index.html references (/assets/* and /favicon.svg etc.).
-  if (existsSync(webDist)) {
-    await app.register(fastifyStatic, {
-      root: webDist,
-      prefix: "/",
-      decorateReply: false
-    });
-  }
-
-  // SPA fallback: any GET that didn't match a controller or static asset and
-  // wants HTML returns index.html so React Router can take over.
-  const fastify = app.getHttpAdapter().getInstance();
-  const indexHtmlPath = `${webDist}/index.html`;
-  fastify.setNotFoundHandler((request, reply) => {
-    const accept = String(request.headers.accept ?? "");
-    if (
-      request.method === "GET" &&
-      accept.includes("text/html") &&
-      !request.url.startsWith("/api/") &&
-      !request.url.startsWith("/assets/") &&
-      existsSync(indexHtmlPath)
-    ) {
-      reply.type("text/html; charset=utf-8");
-      return reply.send(readFileSync(indexHtmlPath, "utf-8"));
-    }
-    return reply.code(404).send({ message: "Not Found" });
   });
 
   app.enableCors({
@@ -85,6 +59,7 @@ async function bootstrap() {
     credentials: true
   });
   app.useGlobalInterceptors(new HttpOkInterceptor());
+  app.useGlobalFilters(new SpaFallbackFilter());
   app
     .getHttpAdapter()
     .getInstance()
