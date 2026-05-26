@@ -88,8 +88,11 @@ export function ServerNodeForm({
     Number(init("server_port", initial.serverPort ?? 443))
   );
   const [rate, setRate] = useState(String(init("rate", "1")));
-  const [show, setShow] = useState(Boolean(initial.show ?? 1));
-  const [sort, setSort] = useState(String(initial.sort ?? ""));
+  // `show` and `sort` are intentionally edited from the outer list (toggle
+  // column + drag handle), not inside this drawer. Preserve the original
+  // value when editing, default to visible / no explicit sort when creating.
+  const initialShow = initial.show == null ? 1 : Number(initial.show) ? 1 : 0;
+  const initialSort = initial.sort == null || initial.sort === "" ? null : Number(initial.sort);
   const [groupIds, setGroupIds] = useState<number[]>(
     Array.isArray(initial.group_id)
       ? (initial.group_id as number[])
@@ -150,8 +153,8 @@ export function ServerNodeForm({
         port,
         server_port: serverPort,
         rate,
-        show: show ? 1 : 0,
-        sort: sort === "" ? null : Number(sort),
+        show: initialShow,
+        sort: initialSort,
         protocol,
         group_id: groupIds.map(String),
         route_id: routeIds.map(String)
@@ -265,19 +268,6 @@ export function ServerNodeForm({
               placeholder="不强制"
             />
           </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="排序">
-              <Input
-                type="number"
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                placeholder="数字越大越靠前"
-              />
-            </Field>
-            <Field label="对外显示">
-              <Switch checked={show} onCheckedChange={setShow} />
-            </Field>
-          </div>
         </Section>
 
         <Section title="协议参数">

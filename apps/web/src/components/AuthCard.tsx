@@ -15,7 +15,7 @@ export function AuthCard({
   const hasBg = Boolean(theme.frontend_background_url);
   return (
     <div
-      className={`relative flex min-h-screen items-center justify-center px-4 py-10 ${hasBg ? "" : "bg-[#e8eaf0]"}`}
+      className={`flex min-h-screen items-center justify-center px-4 py-10 ${hasBg ? "" : "bg-[#e8eaf0]"}`}
       style={
         hasBg
           ? {
@@ -27,9 +27,6 @@ export function AuthCard({
           : undefined
       }
     >
-      <div className="absolute right-4 top-4">
-        <LanguageSwitcher />
-      </div>
       <Card
         className={`w-full max-w-md overflow-hidden p-0 shadow-lg backdrop-blur ${
           hasBg ? "bg-white/70 ring-white/40" : "bg-white"
@@ -40,9 +37,9 @@ export function AuthCard({
           <p className="mt-1 text-sm text-muted-foreground">{theme.app_description}</p>
         </div>
         <div className="px-8 pb-6 pt-4">{children}</div>
-        <div className="flex items-center justify-between border-t bg-muted/30 px-8 py-3 text-sm text-muted-foreground">
-          <div>{footerLeft}</div>
-          <div />
+        <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-1.5 text-sm text-muted-foreground">
+          <div className="px-4">{footerLeft}</div>
+          <LanguageSwitcher />
         </div>
       </Card>
     </div>

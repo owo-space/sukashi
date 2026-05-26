@@ -22,12 +22,11 @@ const PERIODS: Array<{ key: keyof Plan; label: string }> = [
   { key: "onetime_price", label: "一次性" }
 ];
 
-function lowestPrice(p: Plan): { value: number; period: string } | null {
-  for (const { key, label } of PERIODS) {
+function availablePrices(p: Plan): Array<{ key: string; label: string; value: number }> {
+  return PERIODS.flatMap(({ key, label }) => {
     const v = p[key] as number | null | undefined;
-    if (v && v > 0) return { value: v, period: label };
-  }
-  return null;
+    return v != null && v > 0 ? [{ key: String(key), label, value: v }] : [];
+  });
 }
 
 function isPeriodPlan(p: Plan): boolean {
@@ -93,25 +92,51 @@ export function UserPlanPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((plan) => {
-            const price = lowestPrice(plan);
+            const prices = availablePrices(plan);
             return (
-              <Card key={plan.id} className="rounded overflow-hidden border-slate-200">
-                <div className="bg-white px-5 py-4 border-b border-slate-100">
+              <Card key={plan.id} className="flex flex-col overflow-hidden rounded border-slate-200">
+                <div className="border-b border-slate-100 bg-white px-5 py-4">
                   <div className="text-lg font-medium text-slate-800">{plan.name}</div>
+                  <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                    <span>
+                      流量{" "}
+                      <span className="font-medium text-slate-700">
+                        {plan.transfer_enable} GB
+                      </span>
+                    </span>
+                    {plan.device_limit ? (
+                      <span>
+                        设备{" "}
+                        <span className="font-medium text-slate-700">{plan.device_limit}</span>
+                      </span>
+                    ) : null}
+                    {plan.speed_limit ? (
+                      <span>
+                        限速{" "}
+                        <span className="font-medium text-slate-700">
+                          {plan.speed_limit} Mbps
+                        </span>
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-                <div className="bg-slate-100 px-5 py-7 flex items-baseline gap-2">
-                  <span className="text-2xl text-slate-500">¥</span>
-                  <span className="text-4xl font-medium text-slate-700">
-                    {price ? formatCny(price.value) : "—"}
-                  </span>
-                  <span className="ml-auto text-sm text-slate-500">{price?.period ?? ""}</span>
+                <div className="flex flex-1 flex-col gap-1.5 bg-slate-50 px-5 py-4 text-sm">
+                  {prices.length === 0 ? (
+                    <span className="text-slate-400">暂无可选周期</span>
+                  ) : (
+                    prices.map((p) => (
+                      <div key={p.key} className="flex items-baseline justify-between">
+                        <span className="text-slate-600">{p.label}</span>
+                        <span className="font-medium text-slate-800">
+                          <span className="text-xs text-slate-500">¥ </span>
+                          {formatCny(p.value)}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="px-5 py-3 bg-white">
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate(`/plan/${plan.id}`)}
-                    className="bg-slate-200 text-slate-700 hover:bg-slate-300"
-                  >
+                <div className="border-t border-slate-100 bg-white px-5 py-3">
+                  <Button onClick={() => navigate(`/plan/${plan.id}`)} className="w-full">
                     立即订阅
                   </Button>
                 </div>
