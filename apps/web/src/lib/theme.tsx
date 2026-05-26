@@ -84,6 +84,20 @@ export function useTheme(): ThemeConfig {
   return useContext(ThemeContext) ?? DEFAULTS;
 }
 
+/**
+ * Build a slightly darker shade of the main hex (factor 0..1, lower = darker)
+ * for the dark sidebar/header bg, so 深色 mode actually tracks the brand color
+ * instead of falling back to a generic slate.
+ */
+function darken(hex: string, factor = 0.6): string {
+  const n = hex.replace("#", "");
+  const r = Math.round(parseInt(n.slice(0, 2), 16) * factor);
+  const g = Math.round(parseInt(n.slice(2, 4), 16) * factor);
+  const b = Math.round(parseInt(n.slice(4, 6), 16) * factor);
+  const to = (v: number) => v.toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
 function applyTheme(cfg: ThemeConfig) {
   const root = document.documentElement;
   const color = COLOR_HEX[cfg.frontend_theme_color] ?? COLOR_HEX.default;
@@ -94,12 +108,12 @@ function applyTheme(cfg: ThemeConfig) {
   root.style.setProperty("--sidebar-primary", oklch);
   root.style.setProperty("--sidebar-ring", oklch);
   root.style.setProperty("--sidebar-accent-foreground", oklch);
+
+  // dark sidebar/header bg uses a darker shade of the primary color
+  root.style.setProperty("--brand-dark-bg", darken(color, 0.55));
+  root.style.setProperty("--brand-darker-bg", darken(color, 0.35));
+
   root.dataset.sidebar = cfg.frontend_theme_sidebar;
   root.dataset.header = cfg.frontend_theme_header;
-  document.body.style.backgroundImage = cfg.frontend_background_url
-    ? `url(${JSON.stringify(cfg.frontend_background_url)})`
-    : "";
-  document.body.style.backgroundSize = cfg.frontend_background_url ? "cover" : "";
-  document.body.style.backgroundAttachment = cfg.frontend_background_url ? "fixed" : "";
   document.title = cfg.app_name;
 }

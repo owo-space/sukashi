@@ -26,7 +26,11 @@ export function AuthCard({
           : undefined
       }
     >
-      <Card className="w-full max-w-md overflow-hidden p-0 shadow-sm">
+      <Card
+        className={`w-full max-w-md overflow-hidden p-0 shadow-lg backdrop-blur ${
+          hasBg ? "bg-white/70 ring-white/40" : "bg-white"
+        }`}
+      >
         <div className="px-8 pt-10 pb-2 text-center">
           <h1 className="text-4xl font-medium tracking-wide">{theme.app_name}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{theme.app_description}</p>

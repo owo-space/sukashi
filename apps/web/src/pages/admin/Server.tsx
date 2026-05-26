@@ -31,6 +31,7 @@ import { ProtocolChip } from "@/components/admin/ProtocolChip";
 import { ProtocolMenu } from "@/components/admin/ProtocolMenu";
 import { RowActions } from "@/components/admin/RowActions";
 import { DataDrawer } from "@/components/admin/DataDrawer";
+import { NodeInstallDialog } from "@/components/admin/NodeInstallDialog";
 import { ServerNodeForm } from "@/pages/admin/ServerNodeForm";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { PROTOCOLS, type Protocol } from "@/components/admin/protocols";
@@ -39,6 +40,7 @@ interface AdminServer {
   id: number;
   type: string;
   name: string;
+  install_command?: string;
   protocol: Protocol;
   host: string;
   port: string | number;
@@ -165,12 +167,44 @@ export function AdminServerPage() {
   }, [data, search]);
   const paged = rows.slice((page - 1) * PAGE, page * PAGE);
 
+  const [installFor, setInstallFor] = useState<{
+    command: string;
+    name: string;
+    id: number;
+    highlight?: boolean;
+  } | null>(null);
+
   const save = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => apiPost("/admin/server/v2node/save", payload),
-    onSuccess: () => {
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const beforeIds = new Set((data ?? []).map((s) => s.id));
+      const isCreate = !payload.id;
+      await apiPost("/admin/server/v2node/save", payload);
+      if (isCreate) {
+        // refetch to pick up the newly assigned ID + per-node install_command
+        const fresh = await qc.fetchQuery({
+          queryKey: ["admin.server.manage.getNodes"],
+          queryFn: () => apiGet<AdminServer[]>("/admin/server/manage/getNodes")
+        });
+        const created = (fresh as AdminServer[]).find(
+          (s) => !beforeIds.has(s.id)
+        );
+        return created ?? null;
+      }
+      return null;
+    },
+    onSuccess: (created) => {
       toast.success("保存成功");
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] });
+      const cmd = (created as { install_command?: string } | null)?.install_command;
+      if (created && cmd) {
+        setInstallFor({
+          command: cmd,
+          name: created.name,
+          id: created.id,
+          highlight: true
+        });
+      }
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
@@ -330,6 +364,17 @@ export function AdminServerPage() {
                           >
                             编辑
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setInstallFor({
+                                command: s.install_command ?? "",
+                                name: s.name,
+                                id: s.id
+                              })
+                            }
+                          >
+                            安装脚本
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => copy.mutate(s.id)}>
                             复制
                           </DropdownMenuItem>
@@ -388,6 +433,15 @@ export function AdminServerPage() {
           />
         ) : null}
       </DataDrawer>
+
+      <NodeInstallDialog
+        open={installFor !== null}
+        onOpenChange={(o) => !o && setInstallFor(null)}
+        command={installFor?.command ?? ""}
+        nodeName={installFor?.name}
+        nodeId={installFor?.id}
+        highlight={installFor?.highlight}
+      />
     </>
   );
 }

@@ -93,21 +93,8 @@ function titleFor(pathname: string): string {
 export function AdminLayout() {
   const { pathname } = useLocation();
   const theme = useTheme();
-  const hasBg = Boolean(theme.frontend_background_url);
   return (
-    <div
-      className={`flex min-h-screen ${hasBg ? "" : "bg-[#f0f2f5]"}`}
-      style={
-        hasBg
-          ? {
-              backgroundImage: `url(${JSON.stringify(theme.frontend_background_url)})`,
-              backgroundSize: "cover",
-              backgroundAttachment: "fixed",
-              backgroundPosition: "center"
-            }
-          : undefined
-      }
-    >
+    <div className="flex min-h-screen bg-[#f0f2f5]">
       <Sidebar
         title={theme.app_name}
         version={`${theme.app_name} v${import.meta.env.VITE_PANEL_VERSION ?? "1.7.6"}`}

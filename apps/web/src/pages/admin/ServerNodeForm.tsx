@@ -157,10 +157,13 @@ export function ServerNodeForm({
       };
       if (mode === "edit" && initial.id) payload.id = initial.id;
 
+      // Sukad derives the per-protocol auth secret (psk / server_key /
+       // auth_str / uuid:password / Trojan password) from each user's UUID
+       // at connection time. The node-level password fields are intentionally
+       // not exposed to the admin.
       switch (protocol) {
         case "shadowsocks":
           payload.cipher = cipher;
-          payload.server_key = serverKey;
           payload.obfs = obfs || null;
           break;
         case "vless":
@@ -178,28 +181,24 @@ export function ServerNodeForm({
           payload.network_settings = emitJSONField(networkSettings);
           break;
         case "trojan":
-          payload.server_key = serverKey;
           payload.tls = Number(tls || 1);
           payload.tls_settings = emitJSONField(tlsSettings);
           payload.network = network;
           payload.network_settings = emitJSONField(networkSettings);
           break;
         case "hysteria2":
-          payload.server_key = serverKey;
           payload.up_mbps = upMbps;
           payload.down_mbps = downMbps;
           payload.obfs = obfs || null;
           payload.obfs_password = obfsPassword || null;
           break;
         case "tuic":
-          payload.server_key = serverKey;
           payload.udp_relay_mode = udpRelayMode;
           payload.congestion_control = congestion;
           payload.zero_rtt_handshake = zeroRtt ? 1 : 0;
           payload.disable_sni = disableSni ? 1 : 0;
           break;
         case "anytls":
-          payload.server_key = serverKey;
           payload.padding_scheme = emitJSONField(paddingScheme);
           break;
         case "mieru":
@@ -296,9 +295,6 @@ export function ServerNodeForm({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Server Key (密码)" required>
-                <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-              </Field>
               <Field label="Obfs (混淆)">
                 <Select value={obfs || "__none__"} onValueChange={(v) => setObfs(v === "__none__" ? "" : v)}>
                   <SelectTrigger>
@@ -316,11 +312,6 @@ export function ServerNodeForm({
 
           {protocol === "vless" || protocol === "vmess" || protocol === "trojan" ? (
             <>
-              {protocol === "trojan" ? (
-                <Field label="密码" required>
-                  <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-                </Field>
-              ) : null}
               <Field label="TLS">
                 <Select value={tls} onValueChange={setTls}>
                   <SelectTrigger>
@@ -382,9 +373,6 @@ export function ServerNodeForm({
 
           {protocol === "hysteria2" ? (
             <>
-              <Field label="认证密码 (auth_str)" required>
-                <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-              </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="上行 Mbps">
                   <Input
@@ -422,13 +410,6 @@ export function ServerNodeForm({
 
           {protocol === "tuic" ? (
             <>
-              <Field label="UUID:Password" required>
-                <Input
-                  value={serverKey}
-                  onChange={(e) => setServerKey(e.target.value)}
-                  placeholder="uuid:password"
-                />
-              </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="UDP 中继">
                   <Select value={udpRelayMode} onValueChange={setUdpRelayMode}>
@@ -467,9 +448,6 @@ export function ServerNodeForm({
 
           {protocol === "anytls" ? (
             <>
-              <Field label="密码" required>
-                <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-              </Field>
               <Field label="Padding Scheme (JSON, 留空使用默认)">
                 <Textarea
                   rows={6}
