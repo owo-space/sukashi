@@ -108,7 +108,6 @@ export function AdminLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <HeaderBar
           title={titleFor(pathname)}
-          settingsHref="/admin/setting"
           onMenuClick={() => setMobileOpen(true)}
         />
         <main className="flex-1 p-4 md:p-6">

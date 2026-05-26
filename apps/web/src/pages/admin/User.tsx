@@ -56,7 +56,8 @@ interface ServerGroup {
   name: string;
 }
 
-const PAGE = 10;
+const PAGE_SIZES = [10, 20, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZES)[number];
 
 function StatusTag({ banned }: { banned: number }) {
   return banned ? (
@@ -82,15 +83,16 @@ export function AdminUserPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(10);
   const [filterBanned, setFilterBanned] = useState<"all" | "0" | "1">("all");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.user.fetch", page, search, filterBanned],
+    queryKey: ["admin.user.fetch", page, pageSize, search, filterBanned],
     queryFn: () =>
       apiGetEnvelope<AdminUser[]>("/admin/user/fetch", {
         params: {
-          page,
-          page_size: PAGE,
+          current: page,
+          pageSize,
           email: search || undefined,
           banned: filterBanned === "all" ? undefined : filterBanned
         }
@@ -182,7 +184,7 @@ export function AdminUserPage() {
 
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <>
@@ -326,6 +328,7 @@ export function AdminUserPage() {
             <span className="inline-flex size-7 items-center justify-center rounded border border-primary bg-white text-primary">
               {page}
             </span>
+            <span className="text-slate-400">/ {totalPages}</span>
             <Button
               size="sm"
               variant="ghost"
@@ -335,9 +338,20 @@ export function AdminUserPage() {
             >
               ›
             </Button>
-            <span className="ml-2 inline-flex items-center text-slate-500">
-              10 条 / 页
-            </span>
+            <select
+              className="ml-2 h-7 rounded border border-input bg-background px-1.5 text-xs"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value) as PageSize);
+                setPage(1);
+              }}
+            >
+              {PAGE_SIZES.map((n) => (
+                <option key={n} value={n}>
+                  {n} 条 / 页
+                </option>
+              ))}
+            </select>
           </div>
         </CardContent>
       </Card>

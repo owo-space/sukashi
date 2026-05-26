@@ -1,22 +1,12 @@
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import {
-  SlidersHorizontal,
-  ListOrdered,
-  ClipboardList,
-  Users,
-  TrendingUp,
-  UserPlus
-} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiGet } from "@/lib/api";
 import { formatBytes, formatCny } from "@/lib/format";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -43,13 +33,6 @@ interface RankRow {
   u?: number;
   d?: number;
 }
-
-const QUICK_LINKS = [
-  { to: "/admin/setting", icon: SlidersHorizontal, label: "系统设置" },
-  { to: "/admin/order", icon: ListOrdered, label: "订单管理" },
-  { to: "/admin/plan", icon: ClipboardList, label: "订阅管理" },
-  { to: "/admin/user", icon: Users, label: "用户管理" }
-];
 
 export function AdminDashboardPage() {
   const stat = useQuery({
@@ -81,62 +64,46 @@ export function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {QUICK_LINKS.map((q) => {
-          const Icon = q.icon;
-          return (
-            <Link key={q.to} to={q.to} className="group block">
-              <Card
-                className={cn(
-                  "transition-all duration-200",
-                  "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
-                  "group-focus-visible:ring-2 group-focus-visible:ring-primary/40"
-                )}
-              >
-                <CardContent className="flex flex-col items-center gap-2 py-6">
-                  <Icon
-                    className="size-8 text-muted-foreground transition-colors group-hover:text-primary"
-                    strokeWidth={1.5}
-                  />
-                  <div className="text-sm font-medium">{q.label}</div>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatItem
-          label="在线人数"
-          value={String(s?.online_user ?? 0)}
-          icon={<Users className="size-6 text-muted-foreground" />}
-        />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <StatItem label="在线人数" value={String(s?.online_user ?? 0)} />
         <StatItem
           label="今日收入"
           value={
             <>
               {formatCny(s?.day_income ?? 0)}
-              <span className="ml-2 text-base text-muted-foreground">CNY</span>
+              <span className="ml-1 text-xs font-normal text-muted-foreground">CNY</span>
             </>
           }
-          icon={<TrendingUp className="size-6 text-muted-foreground" />}
+        />
+        <StatItem label="实时注册" value={String(s?.day_register_total ?? 0)} />
+        <StatItem
+          label="本月收入"
+          value={
+            <>
+              {formatCny(s?.month_income ?? 0)}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">CNY</span>
+            </>
+          }
         />
         <StatItem
-          label="实时注册"
-          value={String(s?.day_register_total ?? 0)}
-          icon={<UserPlus className="size-6 text-muted-foreground" />}
+          label="上月收入"
+          value={
+            <>
+              {formatCny(s?.last_month_income ?? 0)}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">CNY</span>
+            </>
+          }
         />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <SubStat label="本月收入" value={`${formatCny(s?.month_income ?? 0)} CNY`} />
-        <SubStat label="上月收入" value={`${formatCny(s?.last_month_income ?? 0)} CNY`} />
-        <SubStat
+        <StatItem
           label="上月佣金支出"
-          value={`${formatCny(s?.commission_last_month_payout ?? 0)} CNY`}
+          value={
+            <>
+              {formatCny(s?.commission_last_month_payout ?? 0)}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">CNY</span>
+            </>
+          }
         />
-        <SubStat label="本月新增用户" value={String(s?.month_register_total ?? 0)} />
+        <StatItem label="本月新增用户" value={String(s?.month_register_total ?? 0)} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -169,37 +136,25 @@ export function AdminDashboardPage() {
   );
 }
 
-function StatItem({
-  label,
-  value,
-  icon
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-}) {
+function StatItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-1 py-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {label}
-          {icon}
-        </div>
-        <div className="text-3xl font-medium">{value}</div>
+      <CardContent className="flex flex-col gap-0.5 px-4 py-3">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="truncate text-lg font-semibold leading-tight">{value}</div>
       </CardContent>
     </Card>
   );
 }
 
-function SubStat({ label, value }: { label: string; value: string }) {
-  return (
-    <Card>
-      <CardContent className="flex flex-col py-4">
-        <div className="text-lg font-medium">{value}</div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-      </CardContent>
-    </Card>
-  );
+function truncateLabel(name: string): string {
+  if (!name) return "—";
+  if (name.includes("@")) {
+    const [user, domain] = name.split("@");
+    const head = user.length > 10 ? `${user.slice(0, 10)}…` : user;
+    return `${head}@${domain.split(".")[0]}`;
+  }
+  return name.length > 16 ? `${name.slice(0, 16)}…` : name;
 }
 
 function RankCard({
@@ -213,17 +168,23 @@ function RankCard({
   loading: boolean;
   keyField: "email" | "server_name";
 }) {
-  const data = (rows ?? []).map((r) => ({
-    name: (r[keyField] ?? "—") as string,
-    total: Number(r.total ?? (r.u ?? 0) + (r.d ?? 0))
-  }));
+  // API returns total in GiB units (V2Board convention: row.u+row.d divided
+  // by 1024^3 server-side). Convert back to bytes so formatBytes works.
+  const GIB = 1024 ** 3;
+  const data = (rows ?? []).map((r) => {
+    const gib = r.total != null ? Number(r.total) : (Number(r.u ?? 0) + Number(r.d ?? 0)) / GIB;
+    return {
+      name: (r[keyField] ?? "—") as string,
+      bytes: gib * GIB
+    };
+  });
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
-      <CardContent className="h-64">
+      <CardContent className="h-56">
         {loading ? (
           <Skeleton className="h-full w-full" />
         ) : data.length === 0 ? (
@@ -235,13 +196,38 @@ function RankCard({
             <BarChart
               data={data}
               layout="vertical"
-              margin={{ top: 10, right: 16, bottom: 10, left: 4 }}
+              margin={{ top: 4, right: 64, bottom: 4, left: 0 }}
+              barCategoryGap="20%"
             >
-              <CartesianGrid stroke="hsl(var(--border) / 0.5)" />
-              <XAxis type="number" tickFormatter={(v: number) => formatBytes(v)} fontSize={10} />
-              <YAxis type="category" dataKey="name" fontSize={10} width={120} />
-              <Tooltip formatter={(v) => formatBytes(Number(v))} />
-              <Bar dataKey="total" fill="var(--color-chart-1)" radius={4} />
+              <XAxis type="number" hide />
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={120}
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                tickFormatter={truncateLabel}
+              />
+              <Tooltip
+                cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                formatter={(v) => [formatBytes(Number(v)), "流量"] as [string, string]}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--popover)"
+                }}
+                labelStyle={{ fontSize: 12, fontWeight: 500 }}
+              />
+              <Bar dataKey="bytes" fill="var(--color-chart-1)" radius={[0, 4, 4, 0]} maxBarSize={20}>
+                <LabelList
+                  dataKey="bytes"
+                  position="right"
+                  formatter={(v) => formatBytes(Number(v))}
+                  style={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
