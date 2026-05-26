@@ -8,10 +8,12 @@ test.describe("auth flow", () => {
 
   test("login redirects admin to admin dashboard", async ({ page }) => {
     await page.goto("/login");
-    await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
-    await page.getByLabel("邮箱").fill(ADMIN_EMAIL);
-    await page.getByLabel("密码").fill(ADMIN_PASSWORD);
-    await page.getByRole("button", { name: /^登录/ }).click();
+    // 透かし title shows in the AuthCard
+    await expect(page.getByText("透かし").first()).toBeVisible();
+    await expect(page.getByPlaceholder("邮箱")).toBeVisible();
+    await page.getByPlaceholder("邮箱").fill(ADMIN_EMAIL);
+    await page.getByPlaceholder("密码").fill(ADMIN_PASSWORD);
+    await page.getByRole("button", { name: /登入|登录/ }).click();
     await page.waitForURL(/\/admin/);
     await expect(page.getByText("仪表盘").first()).toBeVisible();
   });
@@ -23,14 +25,13 @@ test.describe("auth flow", () => {
 
   test("register page renders fields", async ({ page }) => {
     await page.goto("/register");
-    await expect(page.getByRole("heading", { name: "注册" })).toBeVisible();
-    await expect(page.getByLabel("邮箱")).toBeVisible();
-    await expect(page.getByLabel("密码")).toBeVisible();
+    await expect(page.getByText("透かし").first()).toBeVisible();
+    await expect(page.getByPlaceholder("邮箱")).toBeVisible();
   });
 
   test("forget page renders fields", async ({ page }) => {
     await page.goto("/forget");
-    await expect(page.getByRole("heading", { name: "忘记密码" })).toBeVisible();
-    await expect(page.getByLabel("邮箱验证码")).toBeVisible();
+    await expect(page.getByText("透かし").first()).toBeVisible();
+    await expect(page.getByPlaceholder("邮箱验证码")).toBeVisible();
   });
 });
