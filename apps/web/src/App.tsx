@@ -29,6 +29,9 @@ import { AdminDashboardPage } from "@/pages/admin/Dashboard";
 import { AdminUserPage } from "@/pages/admin/User";
 import { AdminPlanPage } from "@/pages/admin/Plan";
 import { AdminServerPage } from "@/pages/admin/Server";
+import { AdminServerGroupPage } from "@/pages/admin/ServerGroup";
+import { AdminServerRoutePage } from "@/pages/admin/ServerRoute";
+import { AdminThemePage } from "@/pages/admin/Theme";
 import { AdminOrderPage } from "@/pages/admin/Order";
 import { AdminPaymentPage } from "@/pages/admin/Payment";
 import { AdminCouponPage } from "@/pages/admin/Coupon";
@@ -84,6 +87,9 @@ export function App() {
         <Route path="/admin/user" element={<AdminUserPage />} />
         <Route path="/admin/plan" element={<AdminPlanPage />} />
         <Route path="/admin/server" element={<AdminServerPage />} />
+        <Route path="/admin/server/group" element={<AdminServerGroupPage />} />
+        <Route path="/admin/server/route" element={<AdminServerRoutePage />} />
+        <Route path="/admin/theme" element={<AdminThemePage />} />
         <Route path="/admin/order" element={<AdminOrderPage />} />
         <Route path="/admin/payment" element={<AdminPaymentPage />} />
         <Route path="/admin/coupon" element={<AdminCouponPage />} />

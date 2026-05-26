@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { request } from "@playwright/test";
 
 const STORAGE_PATH = "tests/e2e/.auth/admin.json";
-const BASE_URL = process.env.E2E_BASE_URL ?? "https://suka.owo.as";
+const BASE_URL = process.env.E2E_BASE_URL ?? "https://suka-dev.owo.as";
 const EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@sukashi.com";
 const PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? "test12345";
 

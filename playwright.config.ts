@@ -11,7 +11,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["list"]],
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "https://suka.owo.as",
+    baseURL: process.env.E2E_BASE_URL ?? "https://suka-dev.owo.as",
     trace: "off",
     screenshot: "only-on-failure",
     ignoreHTTPSErrors: true,

@@ -1,18 +1,17 @@
 import { useMemo } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   AppstoreOutlined,
   BookOutlined,
   ContainerOutlined,
   DashboardOutlined,
   LineChartOutlined,
-  LogoutOutlined,
   NotificationOutlined,
   ShoppingOutlined,
   UserOutlined
 } from "@ant-design/icons";
-import { Avatar, Dropdown, Layout, Menu } from "antd";
-import { useAuth } from "@/lib/auth";
+import { Layout, Menu } from "antd";
+import { HeaderActions } from "@/components/HeaderActions";
 
 const { Header, Sider, Content } = Layout;
 
@@ -67,8 +66,6 @@ function buildMenu() {
 }
 
 export function UserLayout() {
-  const { isAdmin, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const items = useMemo(() => buildMenu(), []);
   const selected = useMemo(() => {
@@ -132,45 +129,7 @@ export function UserLayout() {
           }}
         >
           <span style={{ fontSize: 16 }}>{title}</span>
-          <Dropdown
-            menu={{
-              items: [
-                ...(isAdmin
-                  ? [
-                      {
-                        key: "admin",
-                        icon: <DashboardOutlined />,
-                        label: "管理后台",
-                        onClick: () => navigate("/admin")
-                      },
-                      { type: "divider" as const }
-                    ]
-                  : []),
-                {
-                  key: "profile",
-                  icon: <UserOutlined />,
-                  label: "个人中心",
-                  onClick: () => navigate("/profile")
-                },
-                {
-                  key: "logout",
-                  icon: <LogoutOutlined />,
-                  label: "退出登录",
-                  onClick: () => {
-                    logout();
-                    navigate("/login", { replace: true });
-                  }
-                }
-              ]
-            }}
-          >
-            <span
-              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
-            >
-              <Avatar size="small" icon={<UserOutlined />} />
-              <span>账户</span>
-            </span>
-          </Dropdown>
+          <HeaderActions variant="user" />
         </Header>
         <Content style={{ margin: 16, padding: 16, background: "#fff" }}>
           <Outlet />

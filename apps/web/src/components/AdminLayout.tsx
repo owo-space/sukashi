@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import {
   ApartmentOutlined,
   BookOutlined,
@@ -9,18 +9,16 @@ import {
   CustomerServiceOutlined,
   DashboardOutlined,
   GiftOutlined,
-  LogoutOutlined,
   NotificationOutlined,
   PartitionOutlined,
-  SettingOutlined,
   ShoppingOutlined,
   SkinOutlined,
   TagsOutlined,
   TeamOutlined,
   UserOutlined
 } from "@ant-design/icons";
-import { Avatar, Dropdown, Layout, Menu } from "antd";
-import { useAuth } from "@/lib/auth";
+import { Layout, Menu } from "antd";
+import { HeaderActions } from "@/components/HeaderActions";
 
 const { Header, Sider, Content } = Layout;
 
@@ -81,8 +79,6 @@ function buildMenu() {
 }
 
 export function AdminLayout() {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const items = useMemo(() => buildMenu(), []);
   const selected = useMemo(() => {
@@ -140,35 +136,7 @@ export function AdminLayout() {
           }}
         >
           <span style={{ fontSize: 16 }}>{title}</span>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: "user",
-                  icon: <DashboardOutlined />,
-                  label: "用户面板",
-                  onClick: () => navigate("/dashboard")
-                },
-                { type: "divider" as const },
-                {
-                  key: "logout",
-                  icon: <LogoutOutlined />,
-                  label: "退出登录",
-                  onClick: () => {
-                    logout();
-                    navigate("/login", { replace: true });
-                  }
-                }
-              ]
-            }}
-          >
-            <span
-              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
-            >
-              <Avatar size="small" icon={<UserOutlined />} />
-              <span>管理员</span>
-            </span>
-          </Dropdown>
+          <HeaderActions variant="admin" />
         </Header>
         <Content style={{ margin: 16, padding: 16, background: "#fff" }}>
           <Outlet />
