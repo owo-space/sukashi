@@ -78,11 +78,20 @@ async function shot(group, name, path) {
   const url = `${BASE}${path}`;
   process.stdout.write(`${group}/${name}: ${url}\n`);
   try {
-    await page.goto(url, { waitUntil: "networkidle", timeout: 20000 });
+    await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
   } catch (e) {
     process.stdout.write(`  goto warn: ${e.message}\n`);
   }
-  await page.waitForTimeout(1200);
+  // wait until the UmiJS bundle has actually painted content into #root
+  try {
+    await page.waitForFunction(
+      () => (document.getElementById("root")?.innerHTML.length ?? 0) > 4000,
+      { timeout: 15000 }
+    );
+  } catch {
+    process.stdout.write(`  content wait warn\n`);
+  }
+  await page.waitForTimeout(2000);
   await page.screenshot({
     path: `tests/e2e/__reference__/${group}/${name}.png`,
     fullPage: true

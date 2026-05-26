@@ -1,10 +1,12 @@
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, Col, Row, Skeleton, Tag, Typography } from "antd";
+import { Radio, Skeleton, Tag, Typography } from "antd";
 import { apiGet } from "@/lib/api";
 import { EmptyState } from "@/components/EmptyState";
-import { formatCents, bytesToGB } from "@/lib/format";
 import type { Plan } from "@/lib/types";
+
+type FilterKey = "all" | "period" | "traffic";
 
 const PERIODS: Array<{ key: keyof Plan; label: string }> = [
   { key: "month_price", label: "月付" },
@@ -16,70 +18,142 @@ const PERIODS: Array<{ key: keyof Plan; label: string }> = [
   { key: "onetime_price", label: "一次性" }
 ];
 
+function lowestPrice(plan: Plan): { label: string; price: number } | null {
+  for (const p of PERIODS) {
+    const v = plan[p.key];
+    if (typeof v === "number" && v >= 0) {
+      return { label: p.label, price: v };
+    }
+  }
+  return null;
+}
+
 export function PlanPage() {
   const navigate = useNavigate();
+  const [filter, setFilter] = useState<FilterKey>("all");
+
   const { data, isLoading } = useQuery({
     queryKey: ["user", "plan", "fetch"],
     queryFn: () => apiGet<Plan[]>("/user/plan/fetch")
   });
 
-  if (isLoading) return <Skeleton active />;
-  if (!data || data.length === 0) {
-    return (
-      <EmptyState
-        title="暂时没有任何可购的计划"
-        description="管理员尚未上架订阅，请稍后再试或联系客服。"
-      />
-    );
-  }
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    if (filter === "period") {
+      return data.filter((p) => p.month_price != null || p.quarter_price != null);
+    }
+    if (filter === "traffic") {
+      return data.filter((p) => p.onetime_price != null);
+    }
+    return data;
+  }, [data, filter]);
 
   return (
-    <Row gutter={[16, 16]}>
-      {data.map((plan) => {
-        const soldOut = plan.capacity_limit !== null && plan.capacity_limit <= 0;
-        const available = PERIODS.filter((p) => plan[p.key] != null);
-        return (
-          <Col key={plan.id} xs={24} md={12} lg={8}>
-            <Card
-              title={plan.name}
-              extra={soldOut ? <Tag>已售罄</Tag> : null}
-              size="small"
-              styles={{ body: { display: "flex", flexDirection: "column", gap: 12 } }}
-            >
-              {plan.content ? (
+    <div style={{ padding: "8px 4px" }}>
+      <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 24, fontWeight: 500 }}>
+        选择最适合您的计划
+      </Typography.Title>
+
+      <Radio.Group
+        value={filter}
+        onChange={(e) => setFilter(e.target.value as FilterKey)}
+        optionType="button"
+        buttonStyle="solid"
+        style={{ marginBottom: 24, borderRadius: 999 }}
+        options={[
+          { value: "all", label: "全部" },
+          { value: "period", label: "按周期" },
+          { value: "traffic", label: "按流量" }
+        ]}
+      />
+
+      {isLoading ? (
+        <Skeleton active />
+      ) : filtered.length === 0 ? (
+        <EmptyState title="暂时没有任何可购的计划" />
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 760 }}>
+          {filtered.map((plan) => {
+            const soldOut = plan.capacity_limit !== null && plan.capacity_limit <= 0;
+            const cheap = lowestPrice(plan);
+            return (
+              <div
+                key={plan.id}
+                style={{
+                  background: "#fff",
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)"
+                }}
+              >
                 <div
-                  style={{ color: "rgba(0,0,0,0.55)", fontSize: 13 }}
-                  dangerouslySetInnerHTML={{ __html: plan.content }}
-                />
-              ) : null}
-              <Typography.Text type="secondary">
-                {bytesToGB(plan.transfer_enable * 1024 ** 3).toFixed(0)} GB 流量
-                {plan.device_limit ? ` · ${plan.device_limit} 台设备` : ""}
-                {plan.speed_limit ? ` · ${plan.speed_limit} Mbps` : ""}
-              </Typography.Text>
-              {available.slice(0, 4).map((p) => (
-                <div
-                  key={p.key}
-                  style={{ display: "flex", justifyContent: "space-between" }}
+                  style={{
+                    padding: "16px 24px",
+                    color: "rgba(0,0,0,0.85)",
+                    fontSize: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
                 >
-                  <span style={{ color: "rgba(0,0,0,0.55)" }}>{p.label}</span>
-                  <span style={{ fontWeight: 500 }}>
-                    {formatCents(plan[p.key] as number)}
+                  <span>{plan.name}</span>
+                  {soldOut ? <Tag>已售罄</Tag> : null}
+                </div>
+
+                <div
+                  style={{
+                    background: "#f5f6fa",
+                    padding: "32px 24px",
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 12
+                  }}
+                >
+                  <span style={{ fontSize: 18, color: "rgba(0,0,0,0.85)" }}>¥</span>
+                  <span style={{ fontSize: 40, fontWeight: 500, color: "rgba(0,0,0,0.85)" }}>
+                    {cheap ? (cheap.price / 100).toFixed(2) : "—"}
+                  </span>
+                  <span style={{ fontSize: 14, color: "rgba(0,0,0,0.55)", marginLeft: 8 }}>
+                    {cheap?.label ?? ""}
                   </span>
                 </div>
-              ))}
-              <Button
-                type="primary"
-                block
-                disabled={soldOut}
-                onClick={() => navigate(`/plan/${plan.id}`)}
-              >
-                {soldOut ? "已售罄" : "查看详情"}
-              </Button>
-            </Card>
-          </Col>
-        );
-      })}
-    </Row>
+
+                {plan.content ? (
+                  <div
+                    style={{
+                      padding: "12px 24px",
+                      color: "rgba(0,0,0,0.65)",
+                      fontSize: 13,
+                      borderTop: "1px solid #f0f0f0"
+                    }}
+                    dangerouslySetInnerHTML={{ __html: plan.content }}
+                  />
+                ) : null}
+
+                <div style={{ padding: "16px 24px" }}>
+                  <button
+                    type="button"
+                    disabled={soldOut}
+                    onClick={() => navigate(`/plan/${plan.id}`)}
+                    style={{
+                      background: soldOut ? "rgba(0,0,0,0.15)" : "#3b5998",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 4,
+                      padding: "6px 18px",
+                      cursor: soldOut ? "not-allowed" : "pointer",
+                      fontSize: 14
+                    }}
+                  >
+                    {soldOut ? "已售罄" : "立即订阅"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
+
