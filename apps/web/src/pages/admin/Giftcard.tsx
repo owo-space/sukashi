@@ -230,16 +230,16 @@ export function AdminGiftcardPage() {
               onChange={(e) => setForm((f) => ({ ...f, limit_use: Number(e.target.value) }))}
             />
           </Field>
-          <Field label="开始日期" required>
+          <Field label="开始时间" required>
             <Input
-              type="date"
+              type="datetime-local"
               value={String(form.started_at ?? "")}
               onChange={(e) => setForm((f) => ({ ...f, started_at: e.target.value }))}
             />
           </Field>
-          <Field label="结束日期" required>
+          <Field label="结束时间" required>
             <Input
-              type="date"
+              type="datetime-local"
               value={String(form.ended_at ?? "")}
               onChange={(e) => setForm((f) => ({ ...f, ended_at: e.target.value }))}
             />

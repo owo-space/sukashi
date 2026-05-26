@@ -373,7 +373,27 @@ export class AdminCouponController {
       }),
       this.prisma.coupon.count()
     ]);
-    return { data: toJsonSafe(items), total, code: 200, message: "" };
+    // Sum the paid/processing orders that used each coupon so the admin
+    // sees "used / total" in the list. Orders in status 0 (待支付) and 2
+    // (已取消) don't count — they haven't actually consumed a slot.
+    const usedGroups = items.length
+      ? await this.prisma.order.groupBy({
+          by: ["couponId"],
+          where: {
+            couponId: { in: items.map((c) => c.id) },
+            status: { notIn: [0, 2] }
+          },
+          _count: { _all: true }
+        })
+      : [];
+    const usedById = new Map(
+      usedGroups.map((g) => [g.couponId as number, g._count._all])
+    );
+    const rows = items.map((c) => ({
+      ...c,
+      used_count: usedById.get(c.id) ?? 0
+    }));
+    return { data: toJsonSafe(rows), total, code: 200, message: "" };
   }
 
   @Post("generate")

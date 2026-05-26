@@ -41,15 +41,24 @@ interface Coupon {
   started_at: number;
   ended_at: number;
   created_at?: number;
+  /** orders (paid/completed) that consumed this coupon */
+  used_count?: number;
 }
 
 function isoToUnix(s: string): number {
   if (!s) return 0;
   return Math.floor(new Date(s).getTime() / 1000);
 }
-function unixToDateISO(u: number | null | undefined): string {
+/**
+ * Format a unix timestamp as a local "YYYY-MM-DDTHH:MM" string suitable
+ * for <input type="datetime-local">. Uses local-time getters (not
+ * toISOString) so the picker shows the time the admin actually set.
+ */
+function unixToDateTimeISO(u: number | null | undefined): string {
   if (!u) return "";
-  return new Date(u * 1000).toISOString().slice(0, 10);
+  const d = new Date(u * 1000);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function AdminCouponPage() {
@@ -75,8 +84,8 @@ export function AdminCouponPage() {
       value: c.value,
       limit_use: c.limit_use ?? "",
       limit_use_with_user: c.limit_use_with_user ?? "",
-      started_at: unixToDateISO(c.started_at),
-      ended_at: unixToDateISO(c.ended_at),
+      started_at: unixToDateTimeISO(c.started_at),
+      ended_at: unixToDateTimeISO(c.ended_at),
       show: c.show ? 1 : 0
     });
     setMode("edit");
@@ -158,6 +167,7 @@ export function AdminCouponPage() {
                 <TableHead className="text-slate-500">类型</TableHead>
                 <TableHead className="text-slate-500">数值</TableHead>
                 <TableHead className="text-slate-500">显示</TableHead>
+                <TableHead className="text-slate-500">可用次数</TableHead>
                 <TableHead className="text-slate-500">有效期</TableHead>
                 <TableHead className="text-slate-500">创建时间</TableHead>
                 <TableHead className="text-right text-slate-500">操作</TableHead>
@@ -166,13 +176,13 @@ export function AdminCouponPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={10}>
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
               ) : !data || data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={10}>
                     <EmptyState />
                   </TableCell>
                 </TableRow>
@@ -200,6 +210,10 @@ export function AdminCouponPage() {
                     </TableCell>
                     <TableCell>
                       <Switch checked={Boolean(c.show)} onCheckedChange={() => showToggle.mutate(c)} />
+                    </TableCell>
+                    <TableCell className="text-slate-600">
+                      <span className="font-mono">{c.used_count ?? 0}</span>
+                      <span className="text-slate-400"> / {c.limit_use ?? "∞"}</span>
                     </TableCell>
                     <TableCell className="text-xs text-slate-500">
                       {formatUnixDate(c.started_at)} ~ {formatUnixDate(c.ended_at)}
@@ -304,16 +318,16 @@ export function AdminCouponPage() {
               />
             </Field>
           </div>
-          <Field label="开始日期" required>
+          <Field label="开始时间" required>
             <Input
-              type="date"
+              type="datetime-local"
               value={String(form.started_at ?? "")}
               onChange={(e) => setForm((f) => ({ ...f, started_at: e.target.value }))}
             />
           </Field>
-          <Field label="结束日期" required>
+          <Field label="结束时间" required>
             <Input
-              type="date"
+              type="datetime-local"
               value={String(form.ended_at ?? "")}
               onChange={(e) => setForm((f) => ({ ...f, ended_at: e.target.value }))}
             />

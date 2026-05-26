@@ -61,9 +61,24 @@ function firstHeaderValue(value: unknown): string {
 }
 
 /**
- * Resolve the absolute origin of the panel for success/cancel redirect URLs.
- * Prefers the configured app_url; falls back to the incoming request's
- * forwarded host (Nginx → Cloudflare passes x-forwarded-host).
+ * The origin the user's browser was talking to (suka-dev.owo.as vs
+ * suka.owo.as) — derived from the forwarded headers Cloudflare/Nginx
+ * pass through. Used for Stripe success/cancel redirects so the user
+ * lands back on the same site they checked out from.
+ */
+function requestOrigin(request: FastifyRequest): string {
+  const host =
+    firstHeaderValue(request.headers["x-forwarded-host"]) ||
+    firstHeaderValue(request.headers.host);
+  if (!host) return "";
+  const proto = firstHeaderValue(request.headers["x-forwarded-proto"]) || "https";
+  return `${proto}://${host}`;
+}
+
+/**
+ * Configured public origin (`app_url` setting). Used by the webhook URL
+ * the admin paste-and-fills into Stripe — that one must be stable and
+ * point at the production host regardless of who triggers the request.
  */
 function publicOrigin(request: FastifyRequest, settings: SettingsService): string {
   const explicit = settings.getString("app_url");
@@ -107,7 +122,11 @@ export class PaymentService {
     }
     const stripe = new Stripe(cfg.stripe_secret_key);
     const currency = (cfg.currency || "usd").toLowerCase();
-    const origin = publicOrigin(ctx.request, this.settings);
+    // Use the user's request origin (suka.owo.as vs suka-dev.owo.as) for
+    // Stripe's redirect URLs so the user returns to the same site they
+    // started checkout from. The configured app_url is still used for the
+    // webhook callback path (set in Stripe dashboard, separate config).
+    const origin = requestOrigin(ctx.request) || publicOrigin(ctx.request, this.settings);
     const successUrl = `${origin}/#/order/${encodeURIComponent(order.tradeNo)}?paid=1`;
     const cancelUrl = `${origin}/#/order/${encodeURIComponent(order.tradeNo)}?cancel=1`;
 
