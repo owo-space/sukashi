@@ -1,15 +1,14 @@
 import { Outlet, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingBag,
-  UserCircle,
-  Megaphone,
+  Gauge,
   BookOpen,
-  Activity,
-  Wallet,
-  TicketCheck,
-  UserPlus
+  ShoppingBag,
+  CheckCircle2,
+  ListOrdered,
+  UserPlus,
+  UserCircle,
+  MessagesSquare,
+  BarChart3
 } from "lucide-react";
 import { Sidebar, type SidebarSection } from "./Sidebar";
 import { HeaderBar } from "./HeaderBar";
@@ -17,51 +16,57 @@ import { HeaderBar } from "./HeaderBar";
 const sections: SidebarSection[] = [
   {
     items: [
-      { to: "/dashboard", label: "我的", icon: LayoutDashboard },
-      { to: "/plan", label: "订阅购买", icon: Package },
-      { to: "/order", label: "订单查询", icon: ShoppingBag }
+      { to: "/dashboard", label: "仪表盘", icon: Gauge },
+      { to: "/knowledge", label: "使用文档", icon: BookOpen }
     ]
   },
   {
-    label: "用户中心",
+    label: "订阅",
+    items: [
+      { to: "/plan", label: "购买订阅", icon: ShoppingBag },
+      { to: "/node", label: "节点状态", icon: CheckCircle2 }
+    ]
+  },
+  {
+    label: "财务",
+    items: [
+      { to: "/order", label: "我的订单", icon: ListOrdered },
+      { to: "/invite", label: "我的邀请", icon: UserPlus }
+    ]
+  },
+  {
+    label: "用户",
     items: [
       { to: "/profile", label: "个人中心", icon: UserCircle },
-      { to: "/invite", label: "邀请返佣", icon: UserPlus },
-      { to: "/wallet", label: "钱包", icon: Wallet }
+      { to: "/ticket", label: "我的工单", icon: MessagesSquare },
+      { to: "/traffic", label: "流量明细", icon: BarChart3 }
     ]
-  },
-  {
-    label: "工单",
-    items: [
-      { to: "/ticket", label: "工单系统", icon: TicketCheck },
-      { to: "/notice", label: "公告", icon: Megaphone },
-      { to: "/knowledge", label: "知识库", icon: BookOpen }
-    ]
-  },
-  {
-    label: "其他",
-    items: [{ to: "/traffic", label: "流量明细", icon: Activity }]
   }
 ];
 
 const TITLES: Record<string, string> = {
-  "/dashboard": "我的",
-  "/plan": "订阅购买",
-  "/order": "订单查询",
+  "/dashboard": "仪表盘",
+  "/knowledge": "使用文档",
+  "/plan": "购买订阅",
+  "/node": "节点状态",
+  "/order": "我的订单",
+  "/invite": "我的邀请",
   "/profile": "个人中心",
-  "/invite": "邀请返佣",
-  "/wallet": "钱包",
-  "/ticket": "工单系统",
-  "/notice": "公告",
-  "/knowledge": "知识库",
-  "/traffic": "流量明细"
+  "/ticket": "我的工单",
+  "/traffic": "流量明细",
+  "/notice": "公告"
 };
 
 function titleFor(pathname: string): string {
+  let best = "面板";
+  let bestLen = -1;
   for (const key of Object.keys(TITLES)) {
-    if (pathname === key || pathname.startsWith(`${key}/`)) return TITLES[key]!;
+    if ((pathname === key || pathname.startsWith(`${key}/`)) && key.length > bestLen) {
+      best = TITLES[key]!;
+      bestLen = key.length;
+    }
   }
-  return "面板";
+  return best;
 }
 
 export function UserLayout() {
