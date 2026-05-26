@@ -27,6 +27,27 @@ const SUCCESS_EVENT_TYPES = new Set([
   "payment_intent.succeeded"
 ]);
 
+/**
+ * Stripe Checkout's minimum charge per currency (in the smallest unit).
+ * Anything below this returns "must convert to at least 50 cents". We
+ * clamp upward to keep checkout possible even when a generous coupon
+ * brings the order below the floor.
+ */
+const STRIPE_MIN_CHARGE: Record<string, number> = {
+  usd: 50,
+  cad: 50,
+  eur: 50,
+  aud: 50,
+  nzd: 50,
+  sgd: 50,
+  hkd: 400,
+  gbp: 30,
+  jpy: 50,
+  cny: 350,
+  twd: 1500,
+  krw: 600
+};
+
 function configOf(payment: Payment): StripeConfig {
   const value = payment.config as unknown;
   if (!value || typeof value !== "object") return {};
@@ -90,6 +111,14 @@ export class PaymentService {
     const successUrl = `${origin}/#/order/${encodeURIComponent(order.tradeNo)}?paid=1`;
     const cancelUrl = `${origin}/#/order/${encodeURIComponent(order.tradeNo)}?cancel=1`;
 
+    // Stripe Checkout rejects any session whose unit_amount converts to
+    // less than ~$0.50 USD. After coupon discounts the order may dip
+    // below that floor (e.g. a 90%-off coupon on a ¥30 plan gives a ¥3
+    // order). Clamp upward to the per-currency minimum so the user can
+    // still pay, instead of erroring out.
+    const minAmount = STRIPE_MIN_CHARGE[currency] ?? 50;
+    const unitAmount = Math.max(order.totalAmount, minAmount);
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -101,7 +130,7 @@ export class PaymentService {
             // totalAmount in 分 (cents) which lines up directly for USD/EUR;
             // for zero-decimal currencies (JPY etc) the admin must price the
             // plan in whole units of the smallest unit themselves.
-            unit_amount: order.totalAmount,
+            unit_amount: unitAmount,
             product_data: {
               name: `Sukashi Order ${order.tradeNo}`
             }

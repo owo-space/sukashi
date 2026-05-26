@@ -142,14 +142,14 @@ export function UserOrderDetailPage() {
                   </Button>
                 ))
               )}
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 onClick={() => cancel.mutate()}
                 disabled={cancel.isPending}
-                className="w-full py-2 text-sm text-destructive hover:underline"
+                className="w-full border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive"
               >
-                取消订单
-              </button>
+                {cancel.isPending ? "取消中…" : "取消订单"}
+              </Button>
             </>
           ) : (
             <div className="text-sm text-muted-foreground">此订单无需再支付。</div>

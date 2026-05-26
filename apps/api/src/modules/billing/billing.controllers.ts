@@ -410,6 +410,40 @@ export class AdminCouponController {
     return dataResponse(true);
   }
 
+  /**
+   * Edit an existing coupon row in place. Distinct from /generate which
+   * always batches new rows.
+   */
+  @Post("save")
+  async save(@Body() body: Record<string, unknown>) {
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return dataResponse(false);
+    }
+    const data: Prisma.CouponUpdateInput = {
+      updatedAt: unixNow()
+    };
+    if (body.name !== undefined) data.name = String(body.name);
+    if (body.code !== undefined) data.code = String(body.code);
+    if (body.type !== undefined) data.type = Number(body.type);
+    if (body.value !== undefined) data.value = Number(body.value);
+    if (body.show !== undefined) data.show = asBoolean(body.show);
+    if (body.limit_use !== undefined) data.limitUse = asNullableNumber(body.limit_use);
+    if (body.limit_use_with_user !== undefined) {
+      data.limitUseWithUser = asNullableNumber(body.limit_use_with_user);
+    }
+    if (body.limit_plan_ids !== undefined) {
+      data.limitPlanIds = body.limit_plan_ids ? JSON.stringify(body.limit_plan_ids) : null;
+    }
+    if (body.limit_period !== undefined) {
+      data.limitPeriod = body.limit_period ? JSON.stringify(body.limit_period) : null;
+    }
+    if (body.started_at !== undefined) data.startedAt = Number(body.started_at);
+    if (body.ended_at !== undefined) data.endedAt = Number(body.ended_at);
+    await this.prisma.coupon.update({ where: { id }, data });
+    return dataResponse(true);
+  }
+
   @Post("drop")
   async drop(@Body() body: Record<string, unknown>) {
     await this.prisma.coupon.delete({ where: { id: Number(body.id) } });

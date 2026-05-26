@@ -12,6 +12,23 @@ function camelToSnake(key: string): string {
  * snake_case across the board — trade_no, total_amount, created_at,
  * invite_user_id, etc. Without this transform the SPA reads undefined.
  */
+function isDecimalLike(value: object): boolean {
+  // Prisma.Decimal serializes its internals as { s, e, d: number[] } when
+  // walked with Object.entries — detect that shape (or any object with the
+  // Decimal-style toFixed method) and stringify it instead of recursing.
+  if (typeof (value as { toFixed?: unknown }).toFixed === "function") {
+    const ctor = (value as { constructor?: { name?: string } }).constructor?.name;
+    if (ctor === "Decimal") return true;
+  }
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.s === "number" &&
+    typeof obj.e === "number" &&
+    Array.isArray(obj.d) &&
+    Object.keys(obj).length <= 4
+  );
+}
+
 function transform(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (typeof value === "bigint") {
@@ -21,6 +38,7 @@ function transform(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(transform);
   if (typeof value === "object") {
+    if (isDecimalLike(value)) return String(value);
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
       out[camelToSnake(k)] = transform(v);
