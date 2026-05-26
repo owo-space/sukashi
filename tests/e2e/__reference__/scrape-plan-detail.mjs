@@ -1,0 +1,17 @@
+import { chromium } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
+const BASE = "http://localhost:13003";
+const r = await (await chromium.launch()).newContext({ viewport: { width: 1440, height: 900 }});
+const ctx = r;
+const login = await ctx.request.post(`${BASE}/api/v1/passport/auth/login`, { data: { email: "admin@sukashi.com", password: process.env.E2E_ADMIN_PASSWORD }});
+const token = (await login.json())?.data?.auth_data;
+const page = await ctx.newPage();
+await page.goto(`${BASE}/`);
+await page.evaluate((t) => localStorage.setItem("authorization", t), token);
+await page.goto(`${BASE}/#/plan/10`, { waitUntil: "domcontentloaded" });
+await page.reload({ waitUntil: "domcontentloaded" });
+await page.waitForTimeout(5000);
+await page.screenshot({ path: "tests/e2e/__reference__/legacy/user/plan-detail.png", fullPage: true });
+await writeFile("tests/e2e/__reference__/legacy/user/plan-detail.html", await page.content());
+console.log("done");
+process.exit(0);

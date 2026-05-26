@@ -81,7 +81,7 @@ export function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <CardContent className="grid grid-cols-2 gap-px overflow-hidden bg-border md:grid-cols-4">
+        <CardContent className="grid grid-cols-2 gap-px overflow-hidden bg-slate-100 md:grid-cols-4 !px-0">
           {QUICK_LINKS.map((q) => {
             const Icon = q.icon;
             return (

@@ -147,6 +147,10 @@ export function AdminServerPage() {
   const [page, setPage] = useState(1);
   const PAGE = 10;
 
+  const [sortMode, setSortMode] = useState(false);
+  const [sortedIds, setSortedIds] = useState<number[] | null>(null);
+  const [dragId, setDragId] = useState<number | null>(null);
+
   const [editing, setEditing] = useState<{
     mode: "create" | "edit";
     protocol: Protocol;
@@ -155,6 +159,13 @@ export function AdminServerPage() {
 
   const rows = useMemo(() => {
     const all = data ?? [];
+    // when sortMode is on we ignore search/pagination and show every node
+    // in the order the user is dragging them into.
+    if (sortMode) {
+      const idOrder = sortedIds ?? all.map((s) => s.id);
+      const byId = new Map(all.map((s) => [s.id, s]));
+      return idOrder.map((id) => byId.get(id)).filter((s): s is AdminServer => Boolean(s));
+    }
     const q = search.trim().toLowerCase();
     return q
       ? all.filter(
@@ -164,8 +175,8 @@ export function AdminServerPage() {
             String(s.id) === q
         )
       : all;
-  }, [data, search]);
-  const paged = rows.slice((page - 1) * PAGE, page * PAGE);
+  }, [data, search, sortMode, sortedIds]);
+  const paged = sortMode ? rows : rows.slice((page - 1) * PAGE, page * PAGE);
 
   const [installFor, setInstallFor] = useState<{
     command: string;
@@ -232,6 +243,36 @@ export function AdminServerPage() {
     }
   });
 
+  const sortMutation = useMutation({
+    mutationFn: (ids: number[]) =>
+      apiPost("/admin/server/manage/sort", {
+        ids,
+        // legacy v2board also accepts these aliases:
+        sort: ids,
+        server_ids: ids
+      }),
+    onSuccess: () => {
+      toast.success("排序已保存");
+      setSortMode(false);
+      setSortedIds(null);
+      qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
+  });
+
+  function moveSorted(fromId: number, toId: number) {
+    setSortedIds((prev) => {
+      const base = prev ?? (data ?? []).map((s) => s.id);
+      const from = base.indexOf(fromId);
+      const to = base.indexOf(toId);
+      if (from < 0 || to < 0 || from === to) return base;
+      const next = base.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
   return (
     <>
       <Card className="rounded">
@@ -247,15 +288,46 @@ export function AdminServerPage() {
               placeholder="输入任意关键字搜索"
               className="h-9 max-w-xs"
             />
-            <div className="ml-auto">
-              <Button
-                size="sm"
-                variant="default"
-                className="h-9"
-              >
-                <ArrowDownUp className="size-4" />
-                编辑排序
-              </Button>
+            <div className="ml-auto flex items-center gap-2">
+              {sortMode ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => {
+                      setSortMode(false);
+                      setSortedIds(null);
+                    }}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-9"
+                    disabled={sortMutation.isPending}
+                    onClick={() =>
+                      sortMutation.mutate(sortedIds ?? (data ?? []).map((s) => s.id))
+                    }
+                  >
+                    {sortMutation.isPending ? "保存中…" : "保存排序"}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-9"
+                  onClick={() => {
+                    setSortMode(true);
+                    setSortedIds((data ?? []).map((s) => s.id));
+                  }}
+                >
+                  <ArrowDownUp className="size-4" />
+                  编辑排序
+                </Button>
+              )}
             </div>
           </div>
 
@@ -318,9 +390,33 @@ export function AdminServerPage() {
                     .map((id) => groups.data?.find((g) => g.id === id)?.name ?? `#${id}`)
                     .join(", ");
                   return (
-                    <TableRow key={s.id} className="border-b border-slate-100">
+                    <TableRow
+                      key={s.id}
+                      className={`border-b border-slate-100 ${
+                        sortMode ? "cursor-move select-none" : ""
+                      } ${dragId === s.id ? "opacity-40" : ""}`}
+                      draggable={sortMode}
+                      onDragStart={(e) => {
+                        if (!sortMode) return;
+                        setDragId(s.id);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragOver={(e) => {
+                        if (!sortMode || dragId == null || dragId === s.id) return;
+                        e.preventDefault();
+                        moveSorted(dragId, s.id);
+                      }}
+                      onDragEnd={() => setDragId(null)}
+                    >
                       <TableCell>
-                        <ProtocolChip protocol={s.protocol}>{s.id}</ProtocolChip>
+                        {sortMode ? (
+                          <span className="inline-flex items-center gap-2">
+                            <span className="text-slate-400">≡</span>
+                            <ProtocolChip protocol={s.protocol}>{s.id}</ProtocolChip>
+                          </span>
+                        ) : (
+                          <ProtocolChip protocol={s.protocol}>{s.id}</ProtocolChip>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Switch

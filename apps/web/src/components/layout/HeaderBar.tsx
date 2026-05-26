@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LogOut, Settings, User, ChevronDown } from "lucide-react";
 import {
@@ -10,6 +11,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
+import { gravatarUrl } from "@/lib/gravatar";
 
 interface ProfileInfo {
   email?: string;
@@ -24,6 +26,20 @@ export function HeaderBar({ title, settingsHref }: { title: string; settingsHref
     queryFn: () => apiGet<ProfileInfo>("/user/info"),
     staleTime: 60_000
   });
+  const [avatar, setAvatar] = useState<string>("");
+  useEffect(() => {
+    let cancelled = false;
+    if (!data?.email) {
+      setAvatar("");
+      return;
+    }
+    gravatarUrl(data.email, 64).then((u) => {
+      if (!cancelled) setAvatar(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.email]);
 
   return (
     <header
@@ -46,9 +62,18 @@ export function HeaderBar({ title, settingsHref }: { title: string; settingsHref
               type="button"
               className="flex items-center gap-1.5 text-sm text-slate-700 hover:text-primary [html[data-header=dark]_&]:text-white/85 [html[data-header=dark]_&]:hover:text-white"
             >
-              <span className="inline-flex size-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 [html[data-header=dark]_&]:bg-white/20 [html[data-header=dark]_&]:text-white">
-                <User className="size-3" strokeWidth={2} />
-              </span>
+              {avatar ? (
+                <img
+                  src={avatar}
+                  alt=""
+                  className="size-5 rounded-full ring-1 ring-slate-200 [html[data-header=dark]_&]:ring-white/20"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="inline-flex size-5 items-center justify-center rounded-full bg-slate-200 text-slate-600 [html[data-header=dark]_&]:bg-white/20 [html[data-header=dark]_&]:text-white">
+                  <User className="size-3" strokeWidth={2} />
+                </span>
+              )}
               <span>{data?.email ?? "—"}</span>
               <ChevronDown className="size-3 text-slate-400 [html[data-header=dark]_&]:text-white/60" />
             </button>
