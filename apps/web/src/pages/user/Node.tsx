@@ -1,55 +1,103 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
+import { NodeStatusDot } from "@/components/admin/NodeStatusDot";
 import { apiGet } from "@/lib/api";
-import type { ServerNode } from "@/lib/types";
+
+const PROTOCOL_LABEL: Record<string, string> = {
+  shadowsocks: "Shadowsocks",
+  vless: "VLESS",
+  vmess: "VMess",
+  trojan: "Trojan",
+  hysteria2: "Hysteria2",
+  tuic: "TUIC",
+  anytls: "AnyTLS",
+  mieru: "Mieru",
+  snell: "Snell"
+};
+
+interface UserNode {
+  id: number;
+  name: string;
+  protocol?: string;
+  rate?: string | number;
+  tags?: string[];
+  is_online?: number | boolean;
+  available_status?: number | null;
+}
 
 export function UserNodePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["user.server.fetch"],
-    queryFn: () => apiGet<ServerNode[]>("/user/server/fetch"),
+    queryFn: () => apiGet<UserNode[]>("/user/server/fetch"),
     refetchInterval: 30_000
   });
 
-  if (isLoading) return <Skeleton className="h-64 w-full" />;
-  if (!data || data.length === 0)
-    return (
-      <Card>
-        <CardContent>
-          <EmptyState />
-        </CardContent>
-      </Card>
-    );
-
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-      {data.map((n) => (
-        <Card key={`${n.type}-${n.id}`}>
-          <CardHeader>
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span>{n.name}</span>
-              <Badge variant={n.is_online ? "default" : "outline"}>
-                {n.is_online ? "在线" : "离线"}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs text-muted-foreground space-y-1">
-            <div>协议: {n.type}</div>
-            <div>倍率: {n.rate ?? 1}x</div>
-            {n.tags && n.tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1">
-                {n.tags.map((t) => (
-                  <Badge key={t} variant="secondary">
-                    {t}
-                  </Badge>
-                ))}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>名称</TableHead>
+              <TableHead>协议</TableHead>
+              <TableHead>状态</TableHead>
+              <TableHead>倍率</TableHead>
+              <TableHead>标签</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <Skeleton className="h-8 w-full" />
+                </TableCell>
+              </TableRow>
+            ) : !data || data.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <EmptyState />
+                </TableCell>
+              </TableRow>
+            ) : (
+              data.map((n) => (
+                <TableRow key={n.id}>
+                  <TableCell className="font-medium">{n.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">
+                      {PROTOCOL_LABEL[n.protocol ?? ""] ?? n.protocol ?? "—"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <NodeStatusDot
+                      availableStatus={n.available_status ?? null}
+                      isOnline={n.is_online ?? null}
+                    />
+                  </TableCell>
+                  <TableCell>{n.rate ?? 1}x</TableCell>
+                  <TableCell className="text-xs">
+                    {(n.tags ?? []).map((t) => (
+                      <Badge key={t} variant="outline" className="mr-1">
+                        {t}
+                      </Badge>
+                    ))}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
