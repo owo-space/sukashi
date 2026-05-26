@@ -140,6 +140,7 @@ export function ServerNodeForm({
   const [disableSni, setDisableSni] = useState(Boolean(initial.disable_sni));
   const [paddingScheme, setPaddingScheme] = useState(parseJSONField(initial.padding_scheme));
   const [mieruSettings, setMieruSettings] = useState(parseJSONField(initial.mieru_settings));
+  const [snellVersion, setSnellVersion] = useState(String(initial.snell_version ?? 4));
 
   function submit() {
     try {
@@ -212,6 +213,7 @@ export function ServerNodeForm({
           // runtime, so we don't expose a top-level psk/server_key field.
           payload.obfs = obfs || null;
           payload.obfs_password = obfsPassword || null;
+          payload.snell_version = Number(snellVersion) || 4;
           break;
       }
       onSubmit(payload);
@@ -473,6 +475,18 @@ export function ServerNodeForm({
 
           {protocol === "snell" ? (
             <>
+              <Field label="Snell 版本">
+                <Select value={snellVersion} onValueChange={setSnellVersion}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">v3</SelectItem>
+                    <SelectItem value="4">v4 (常见)</SelectItem>
+                    <SelectItem value="5">v5 (最新)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
               <Field label="Obfs">
                 <Select value={obfs || "__none__"} onValueChange={(v) => setObfs(v === "__none__" ? "" : v)}>
                   <SelectTrigger>

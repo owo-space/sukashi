@@ -339,13 +339,19 @@ function buildGeneralLink(uuid: string, server: ServerNode): string | null {
  * subscription is parsed as plain text. For panels that build sing-box,
  * Snell isn't a sing-box outbound type so we still emit nothing there.
  */
+function snellVersionOf(server: ServerNode): number {
+  // Per-node override; falls back to 4 (the most widely-deployed default).
+  const v = (server as ServerNode & { snellVersion?: number | null }).snellVersion;
+  return v && v > 0 ? Number(v) : 4;
+}
+
 function buildSnellSurgeLine(uuid: string, server: ServerNode): string {
   const parts = [
     `${server.name} = snell`,
     server.host,
     String(clientPort(server)),
     `psk=${uuid}`,
-    "version=4"
+    `version=${snellVersionOf(server)}`
   ];
   if (server.obfs) parts.push(`obfs=${server.obfs}`);
   if (server.obfsPassword) parts.push(`obfs-host=${server.obfsPassword}`);
@@ -449,7 +455,7 @@ function buildMihomoYaml(uuid: string, servers: ServerNode[]): string {
       lines.push(`    server: ${yamlString(server.host)}`);
       lines.push(`    port: ${clientPort(server)}`);
       lines.push(`    psk: ${yamlString(uuid)}`);
-      lines.push("    version: 4");
+      lines.push(`    version: ${snellVersionOf(server)}`);
       if (server.obfs) {
         lines.push("    obfs-opts:");
         lines.push(`      mode: ${yamlString(server.obfs)}`);

@@ -1029,6 +1029,10 @@ export class ServerController {
         case "mieruSettings":
           data.mieruSettings = asPrismaJson(value);
           break;
+        case "snell_version":
+        case "snellVersion":
+          data.snellVersion = asNullableNumber(value);
+          break;
       }
     }
 
@@ -1090,7 +1094,8 @@ export class ServerController {
               serverPort,
               network
             ) as Prisma.InputJsonValue)
-          : asPrismaJson(body.mieru_settings ?? body.mieruSettings)
+          : asPrismaJson(body.mieru_settings ?? body.mieruSettings),
+      snellVersion: asNullableNumber(body.snell_version ?? body.snellVersion)
     };
   }
 }

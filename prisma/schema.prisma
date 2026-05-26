@@ -397,6 +397,7 @@ model ServerNode {
   obfsPassword       String?      @map("obfs_password")
   paddingScheme      Json?        @map("padding_scheme")
   mieruSettings      Json?        @map("mieru_settings")
+  snellVersion       Int?         @map("snell_version")
   insecure           Boolean      @default(false)
   serverName         String?      @map("server_name") @db.VarChar(128)
   createdAt          Int          @map("created_at")
