@@ -1,25 +1,18 @@
+import path from "node:path";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
-    alias: [
-      {
-        find: /^~antd\/(.*)$/,
-        replacement: "antd/$1"
-      }
-    ]
-  },
-  css: {
-    preprocessorOptions: {
-      less: {
-        javascriptEnabled: true
-      }
+    alias: {
+      "@": path.resolve(__dirname, "./src")
     }
   },
   server: {
     port: 5173,
+    host: "0.0.0.0",
     proxy: {
       "/api": "http://localhost:3000"
     }

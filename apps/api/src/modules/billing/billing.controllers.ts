@@ -495,9 +495,15 @@ export class AdminPaymentController {
   async save(@Body() body: Record<string, unknown>) {
     const now = unixNow();
     const id = asNullableNumber(body.id);
+    // Sukashi is Stripe-only. Reject anything else so the admin can't even
+    // accidentally persist a legacy provider name like EPay/Alipay.
+    const providerRaw = String(body.payment ?? "Stripe");
+    if (providerRaw !== "Stripe") {
+      return dataResponse(false);
+    }
     const data = {
       uuid: String(body.uuid ?? randomChar(16)),
-      payment: String(body.payment ?? "EPay"),
+      payment: "Stripe",
       name: String(body.name ?? "Payment"),
       icon: body.icon ? String(body.icon) : null,
       config: (body.config ?? {}) as Prisma.InputJsonValue,
