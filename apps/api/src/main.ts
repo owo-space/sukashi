@@ -1,12 +1,13 @@
 import "reflect-metadata";
 import fastifyStatic from "@fastify/static";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
   type NestFastifyApplication
 } from "@nestjs/platform-fastify";
 import type { IncomingMessage } from "node:http";
-import { fileURLToPath } from "node:url";
 import { AppModule } from "./modules/app.module.js";
 import { HttpOkInterceptor } from "./modules/common/http-ok.interceptor.js";
 
@@ -38,16 +39,45 @@ async function bootstrap() {
     rewriteUrl: rewriteLegacyApiV1Url
   });
 
-  // `rawBody: true` makes NestJS retain the original request bytes on
-  // `request.rawBody` while still parsing the body normally. Stripe's
-  // webhook signature verification needs the exact bytes Stripe signed.
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
     rawBody: true
   });
 
+  const publicDir = fileURLToPath(new URL("../../../public", import.meta.url));
+  const webDist = fileURLToPath(new URL("../../web/dist", import.meta.url));
+
   await app.register(fastifyStatic, {
-    root: fileURLToPath(new URL("../../../public", import.meta.url)),
+    root: publicDir,
     prefix: "/"
+  });
+
+  // Serve the Vite build's hashed assets and fonts at the same paths the
+  // index.html references (/assets/* and /favicon.svg etc.).
+  if (existsSync(webDist)) {
+    await app.register(fastifyStatic, {
+      root: webDist,
+      prefix: "/",
+      decorateReply: false
+    });
+  }
+
+  // SPA fallback: any GET that didn't match a controller or static asset and
+  // wants HTML returns index.html so React Router can take over.
+  const fastify = app.getHttpAdapter().getInstance();
+  const indexHtmlPath = `${webDist}/index.html`;
+  fastify.setNotFoundHandler((request, reply) => {
+    const accept = String(request.headers.accept ?? "");
+    if (
+      request.method === "GET" &&
+      accept.includes("text/html") &&
+      !request.url.startsWith("/api/") &&
+      !request.url.startsWith("/assets/") &&
+      existsSync(indexHtmlPath)
+    ) {
+      reply.type("text/html; charset=utf-8");
+      return reply.send(readFileSync(indexHtmlPath, "utf-8"));
+    }
+    return reply.code(404).send({ message: "Not Found" });
   });
 
   app.enableCors({

@@ -23,7 +23,8 @@ FROM deps AS build
 
 COPY . .
 RUN pnpm --filter @sukashi/shared build \
-  && pnpm --filter @sukashi/api build
+  && pnpm --filter @sukashi/api build \
+  && pnpm --filter @sukashi/web build
 
 FROM base AS runtime
 
