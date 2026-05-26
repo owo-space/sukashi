@@ -24,9 +24,16 @@ export class GuestCommController {
         : 0,
       is_recaptcha: this.settings.getInt("recaptcha_enable", 0),
       recaptcha_site_key: this.settings.getString("recaptcha_site_key"),
+      app_name: this.settings.getString("app_name", "透かし"),
       app_description: this.settings.getString("app_description"),
       app_url: this.settings.getString("app_url"),
-      logo: this.settings.getString("logo")
+      logo: this.settings.getString("logo"),
+      // theme exposed publicly so the SPA can paint the panel with the
+      // configured colors before the user logs in.
+      frontend_theme_color: this.settings.getString("frontend_theme_color", "default"),
+      frontend_theme_sidebar: this.settings.getString("frontend_theme_sidebar", "light"),
+      frontend_theme_header: this.settings.getString("frontend_theme_header", "light"),
+      frontend_background_url: this.settings.getString("frontend_background_url", "")
     });
   }
 }

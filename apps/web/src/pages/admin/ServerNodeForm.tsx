@@ -203,12 +203,14 @@ export function ServerNodeForm({
           payload.padding_scheme = emitJSONField(paddingScheme);
           break;
         case "mieru":
-          payload.server_key = serverKey;
-          payload.network = network;
+          // Mieru auth + transport live entirely inside mieru_settings JSON;
+          // the top-level server_key/network/cipher fields are ignored by the
+          // node agent for this protocol.
           payload.mieru_settings = emitJSONField(mieruSettings);
           break;
         case "snell":
-          payload.server_key = serverKey;
+          // Sukad derives the Snell PSK per-user from the user's UUID at
+          // runtime, so we don't expose a top-level psk/server_key field.
           payload.obfs = obfs || null;
           payload.obfs_password = obfsPassword || null;
           break;
@@ -480,26 +482,12 @@ export function ServerNodeForm({
 
           {protocol === "mieru" ? (
             <>
-              <Field label="用户密码" required>
-                <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-              </Field>
-              <Field label="传输协议">
-                <Select value={network} onValueChange={setNetwork}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="tcp">TCP</SelectItem>
-                    <SelectItem value="udp">UDP</SelectItem>
-                    <SelectItem value="mixed">TCP + UDP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Mieru Settings (JSON, 留空使用默认)">
+              <Field label="Mieru Settings (JSON, 留空使用默认 port_bindings)">
                 <Textarea
-                  rows={6}
+                  rows={8}
                   value={mieruSettings}
                   onChange={(e) => setMieruSettings(e.target.value)}
+                  placeholder='{"mtu":0,"port_bindings":[{"port":443,"protocol":"TCP"}],"user_hint_is_mandatory":false}'
                 />
               </Field>
             </>
@@ -507,9 +495,6 @@ export function ServerNodeForm({
 
           {protocol === "snell" ? (
             <>
-              <Field label="PSK" required>
-                <Input value={serverKey} onChange={(e) => setServerKey(e.target.value)} />
-              </Field>
               <Field label="Obfs">
                 <Select value={obfs || "__none__"} onValueChange={(v) => setObfs(v === "__none__" ? "" : v)}>
                   <SelectTrigger>

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Sidebar, type SidebarSection } from "./Sidebar";
 import { HeaderBar } from "./HeaderBar";
+import { useTheme } from "@/lib/theme";
 
 const sections: SidebarSection[] = [
   {
@@ -71,11 +72,25 @@ function titleFor(pathname: string): string {
 
 export function UserLayout() {
   const { pathname } = useLocation();
+  const theme = useTheme();
+  const hasBg = Boolean(theme.frontend_background_url);
   return (
-    <div className="flex min-h-screen bg-[#f0f2f5]">
+    <div
+      className={`flex min-h-screen ${hasBg ? "" : "bg-[#f0f2f5]"}`}
+      style={
+        hasBg
+          ? {
+              backgroundImage: `url(${JSON.stringify(theme.frontend_background_url)})`,
+              backgroundSize: "cover",
+              backgroundAttachment: "fixed",
+              backgroundPosition: "center"
+            }
+          : undefined
+      }
+    >
       <Sidebar
-        title="透かし"
-        version={`透かし v${import.meta.env.VITE_PANEL_VERSION ?? "1.7.6"}`}
+        title={theme.app_name}
+        version={`${theme.app_name} v${import.meta.env.VITE_PANEL_VERSION ?? "1.7.6"}`}
         sections={sections}
       />
       <div className="flex flex-1 flex-col">

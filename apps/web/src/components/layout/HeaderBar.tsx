@@ -26,8 +26,8 @@ export function HeaderBar({ title, settingsHref }: { title: string; settingsHref
   });
 
   return (
-    <header className="flex h-14 items-center justify-between bg-white border-b border-slate-200 px-6">
-      <h1 className="text-[15px] text-slate-700">{title}</h1>
+    <header className="flex h-14 items-center justify-between bg-white border-b border-slate-200 px-6 [html[data-header=dark]_&]:bg-slate-900 [html[data-header=dark]_&]:border-slate-800 [html[data-header=dark]_&]:text-slate-100">
+      <h1 className="text-[15px] text-slate-700 [html[data-header=dark]_&]:text-slate-100">{title}</h1>
       <div className="flex items-center gap-4">
         {settingsHref ? (
           <Link

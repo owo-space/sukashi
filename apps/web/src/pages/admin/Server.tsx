@@ -203,7 +203,7 @@ export function AdminServerPage() {
       <Card className="rounded">
         <CardContent className="p-0">
           {/* toolbar */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100">
             <ProtocolMenu
               onPick={(protocol) => setEditing({ mode: "create", protocol })}
             />

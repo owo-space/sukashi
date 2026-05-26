@@ -24,7 +24,10 @@ export function Sidebar({
   sections: SidebarSection[];
 }) {
   return (
-    <aside className="hidden md:flex md:w-[208px] md:flex-col md:bg-white md:border-r md:border-slate-200">
+    <aside
+      data-mode="sidebar"
+      className="hidden md:flex md:w-[208px] md:flex-col md:border-r data-[mode=sidebar]:bg-white data-[mode=sidebar]:border-slate-200 [html[data-sidebar=dark]_&]:bg-slate-900 [html[data-sidebar=dark]_&]:border-slate-800"
+    >
       <div className="flex h-14 items-center justify-center bg-primary text-primary-foreground text-xl font-medium tracking-wider">
         {title}
       </div>
@@ -32,7 +35,7 @@ export function Sidebar({
         {sections.map((section, sectionIdx) => (
           <div key={`${section.label ?? "default"}-${sectionIdx}`} className="mb-2">
             {section.label ? (
-              <div className="px-4 pt-3 pb-1.5 text-xs text-slate-400">
+              <div className="px-4 pt-3 pb-1.5 text-xs text-slate-400 [html[data-sidebar=dark]_&]:text-slate-500">
                 {section.label}
               </div>
             ) : null}
@@ -47,8 +50,9 @@ export function Sidebar({
                       className={({ isActive }) =>
                         cn(
                           "flex items-center gap-2 px-4 py-2 text-[13px] transition-colors",
-                          "text-slate-700 hover:bg-slate-100",
-                          isActive && "bg-blue-50 text-primary"
+                          "text-slate-700 hover:bg-slate-100 [html[data-sidebar=dark]_&]:text-slate-300 [html[data-sidebar=dark]_&]:hover:bg-slate-800",
+                          isActive &&
+                            "bg-blue-50 text-primary [html[data-sidebar=dark]_&]:bg-slate-800 [html[data-sidebar=dark]_&]:text-primary"
                         )
                       }
                     >

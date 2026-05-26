@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Copy, ExternalLink } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +47,19 @@ export function SubscribeModal({
         <DialogHeader>
           <DialogTitle>订阅地址</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-center">
+            {subscribeUrl ? (
+              <div className="rounded border border-slate-200 bg-white p-3">
+                <QRCodeSVG
+                  value={subscribeUrl}
+                  size={196}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+            ) : null}
+          </div>
           <div className="flex gap-2">
             <Input value={subscribeUrl} readOnly className="font-mono text-xs" />
             <Button variant="outline" onClick={copy}>

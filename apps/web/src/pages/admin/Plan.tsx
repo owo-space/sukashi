@@ -167,7 +167,7 @@ export function AdminPlanPage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-4 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-slate-100">
             <Button size="sm" variant="outline" className="h-9 gap-1" onClick={openCreate}>
               <Plus className="size-4" />
               添加订阅

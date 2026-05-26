@@ -70,6 +70,14 @@ function StatusTag({ banned }: { banned: number }) {
   );
 }
 
+const GIB = 1024 ** 3;
+function bytesToGb(b: number): number {
+  return Math.round((b / GIB) * 100) / 100;
+}
+function gbToBytes(g: number): number {
+  return Math.round(g * GIB);
+}
+
 export function AdminUserPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -120,9 +128,9 @@ export function AdminUserPage() {
       password: "",
       plan_id: u.plan_id ? String(u.plan_id) : "",
       group_id: u.group_id ? String(u.group_id) : "",
-      transfer_enable: u.transfer_enable ?? 0,
-      u: u.u ?? 0,
-      d: u.d ?? 0,
+      transfer_enable: bytesToGb(u.transfer_enable ?? 0),
+      u: bytesToGb(u.u ?? 0),
+      d: bytesToGb(u.d ?? 0),
       device_limit: u.device_limit ?? "",
       speed_limit: u.speed_limit ?? "",
       expired_at: u.expired_at ? new Date(u.expired_at * 1000).toISOString().slice(0, 16) : "",
@@ -144,6 +152,12 @@ export function AdminUserPage() {
           : null;
       }
       if (payload.password === "") delete payload.password;
+      // The form stores transfer/u/d in GB but the API stores raw Bytes.
+      for (const key of ["transfer_enable", "u", "d"] as const) {
+        if (payload[key] !== "" && payload[key] != null) {
+          payload[key] = gbToBytes(Number(payload[key]));
+        }
+      }
       return apiPost("/admin/user/update", payload);
     },
     onSuccess: () => {
@@ -175,7 +189,7 @@ export function AdminUserPage() {
       <Card className="rounded">
         <CardContent className="p-0">
           {/* toolbar */}
-          <div className="flex items-center gap-1.5 px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 px-6 py-3 border-b border-slate-100">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="h-9 gap-1">
@@ -408,9 +422,10 @@ export function AdminUserPage() {
 
           <Section title="流量与限制">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="总流量 (Bytes)">
+              <Field label="总流量 (GB)">
                 <Input
                   type="number"
+                  step="0.01"
                   value={String(form.transfer_enable ?? "")}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, transfer_enable: Number(e.target.value) }))
@@ -426,16 +441,18 @@ export function AdminUserPage() {
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="已用上传 (Bytes)">
+              <Field label="已用上传 (GB)">
                 <Input
                   type="number"
+                  step="0.01"
                   value={String(form.u ?? "")}
                   onChange={(e) => setForm((f) => ({ ...f, u: Number(e.target.value) }))}
                 />
               </Field>
-              <Field label="已用下载 (Bytes)">
+              <Field label="已用下载 (GB)">
                 <Input
                   type="number"
+                  step="0.01"
                   value={String(form.d ?? "")}
                   onChange={(e) => setForm((f) => ({ ...f, d: Number(e.target.value) }))}
                 />
