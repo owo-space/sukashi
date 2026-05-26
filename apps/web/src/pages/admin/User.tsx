@@ -15,7 +15,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatBytes, formatCny, formatUnixDate } from "@/lib/format";
 
 interface AdminUser {
@@ -23,9 +23,9 @@ interface AdminUser {
   email: string;
   banned: number;
   plan_id: number | null;
-  plan?: { id: number; name: string } | null;
+  plan_name?: string | null;
   group_id?: number | null;
-  group?: { id: number; name: string } | null;
+  group_name?: string | null;
   transfer_enable?: number;
   u?: number;
   d?: number;
@@ -46,7 +46,7 @@ export function AdminUserPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin.user.fetch", page, search],
     queryFn: () =>
-      apiGet<{ data: AdminUser[]; total: number }>("/admin/user/fetch", {
+      apiGetEnvelope<AdminUser[]>("/admin/user/fetch", {
         params: { page, page_size: PAGE_SIZE, email: search || undefined }
       })
   });
@@ -59,10 +59,8 @@ export function AdminUserPage() {
   });
 
   const rows = data?.data ?? [];
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE)),
-    [data?.total]
-  );
+  const total = data?.total ?? 0;
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
   return (
     <Card>
@@ -75,6 +73,7 @@ export function AdminUserPage() {
             className="w-64"
           />
           <Button onClick={() => setPage(1)}>搜索</Button>
+          <span className="ml-auto text-sm text-muted-foreground">共 {total} 个用户</span>
         </div>
 
         <Table>
@@ -85,8 +84,8 @@ export function AdminUserPage() {
               <TableHead>状态</TableHead>
               <TableHead>订阅</TableHead>
               <TableHead>权限组</TableHead>
-              <TableHead>已用</TableHead>
-              <TableHead>流量</TableHead>
+              <TableHead>已用(G)</TableHead>
+              <TableHead>流量(G)</TableHead>
               <TableHead>余额</TableHead>
               <TableHead>佣金</TableHead>
               <TableHead>到期时间</TableHead>
@@ -119,10 +118,10 @@ export function AdminUserPage() {
                         {u.banned ? "封禁" : "正常"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{u.plan?.name ?? "—"}</TableCell>
-                    <TableCell>{u.group?.name ?? "—"}</TableCell>
-                    <TableCell>{formatBytes(used)}</TableCell>
-                    <TableCell>{formatBytes(total)}</TableCell>
+                    <TableCell>{u.plan_name ?? "—"}</TableCell>
+                    <TableCell>{u.group_name ?? "—"}</TableCell>
+                    <TableCell>{(used / 1024 ** 3).toFixed(2)}</TableCell>
+                    <TableCell>{(total / 1024 ** 3).toFixed(2)}</TableCell>
                     <TableCell>¥ {formatCny(u.balance)}</TableCell>
                     <TableCell>¥ {formatCny(u.commission_balance)}</TableCell>
                     <TableCell className="text-muted-foreground">

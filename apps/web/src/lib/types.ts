@@ -19,7 +19,7 @@ export interface UserInfo {
 
 export interface Plan {
   id: number;
-  group_id?: number;
+  group_id?: number | null;
   name: string;
   content?: string;
   transfer_enable: number; // GiB

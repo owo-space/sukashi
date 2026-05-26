@@ -22,7 +22,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
 
 interface AdminOrder {
@@ -56,7 +56,7 @@ export function AdminOrderPage() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin.order.fetch", page, filter, tradeNo],
     queryFn: () =>
-      apiGet<{ data: AdminOrder[]; total: number }>("/admin/order/fetch", {
+      apiGetEnvelope<AdminOrder[]>("/admin/order/fetch", {
         params: { page, page_size: PAGE_SIZE, status: filter || undefined, trade_no: tradeNo || undefined }
       })
   });
