@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -11,14 +11,12 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { apiGet } from "@/lib/api";
 import { formatUnixDate } from "@/lib/format";
 import type { Ticket } from "@/lib/types";
 
 const LEVEL_LABEL: Record<number, string> = { 0: "低", 1: "中", 2: "高" };
-const STATUS_LABEL: Record<number, string> = { 0: "已开启", 1: "已关闭" };
 
 export function UserTicketPage() {
   const { data, isLoading } = useQuery({
@@ -27,9 +25,9 @@ export function UserTicketPage() {
   });
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base font-medium">工单历史</CardTitle>
+    <Card className="rounded border-slate-200">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 py-3">
+        <CardTitle className="text-sm font-medium text-slate-700">工单历史</CardTitle>
         <Button asChild size="sm">
           <Link to="/ticket/new">新的工单</Link>
         </Button>
@@ -37,14 +35,14 @@ export function UserTicketPage() {
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>主题</TableHead>
-              <TableHead>工单级别</TableHead>
-              <TableHead>工单状态</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead>最后回复</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="w-12 text-slate-500">#</TableHead>
+              <TableHead className="text-slate-500">主题</TableHead>
+              <TableHead className="text-slate-500">工单级别</TableHead>
+              <TableHead className="text-slate-500">工单状态</TableHead>
+              <TableHead className="text-slate-500">创建时间</TableHead>
+              <TableHead className="text-slate-500">最后回复</TableHead>
+              <TableHead className="text-right text-slate-500">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -62,21 +60,27 @@ export function UserTicketPage() {
               </TableRow>
             ) : (
               data.map((t, i) => (
-                <TableRow key={t.id}>
-                  <TableCell>{i + 1}</TableCell>
+                <TableRow key={t.id} className="border-b border-slate-100">
+                  <TableCell className="text-slate-600">{i + 1}</TableCell>
                   <TableCell>{t.subject}</TableCell>
-                  <TableCell>{LEVEL_LABEL[t.level] ?? t.level}</TableCell>
+                  <TableCell className="text-slate-600">{LEVEL_LABEL[t.level] ?? t.level}</TableCell>
                   <TableCell>
-                    <Badge variant={t.status === 0 ? "default" : "outline"}>
-                      {STATUS_LABEL[t.status] ?? t.status}
-                    </Badge>
+                    {t.status === 0 ? (
+                      <span className="inline-flex items-center rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-600">
+                        已开启
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+                        已关闭
+                      </span>
+                    )}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{formatUnixDate(t.created_at)}</TableCell>
-                  <TableCell className="text-muted-foreground">{formatUnixDate(t.updated_at)}</TableCell>
+                  <TableCell className="text-xs text-slate-500">{formatUnixDate(t.created_at)}</TableCell>
+                  <TableCell className="text-xs text-slate-500">{formatUnixDate(t.updated_at)}</TableCell>
                   <TableCell className="text-right">
-                    <Button asChild size="sm" variant="ghost">
-                      <Link to={`/ticket/${t.id}`}>查看</Link>
-                    </Button>
+                    <Link to={`/ticket/${t.id}`} className="text-primary hover:underline text-sm">
+                      查看
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))

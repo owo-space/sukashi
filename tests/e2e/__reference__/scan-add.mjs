@@ -15,7 +15,7 @@ const PAGES = [
   ["/admin/server-route", /添加路由/],
   ["/admin/plan", /添加订阅/],
   ["/admin/payment", /添加 Stripe/],
-  ["/admin/coupon", /添加优惠券/],
+  ["/admin/coupon", /生成优惠券/],
   ["/admin/giftcard", /生成礼品卡/],
   ["/admin/notice", /添加公告/],
   ["/admin/knowledge", /添加文章/]

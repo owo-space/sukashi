@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -27,19 +27,16 @@ export function UserTrafficPage() {
   });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base font-medium">流量明细</CardTitle>
-      </CardHeader>
+    <Card className="rounded border-slate-200">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>日期</TableHead>
-              <TableHead>上传</TableHead>
-              <TableHead>下载</TableHead>
-              <TableHead>合计</TableHead>
-              <TableHead>计算倍率</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="text-slate-500">日期</TableHead>
+              <TableHead className="text-slate-500">上传</TableHead>
+              <TableHead className="text-slate-500">下载</TableHead>
+              <TableHead className="text-slate-500">合计</TableHead>
+              <TableHead className="text-slate-500">计算倍率</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -57,12 +54,12 @@ export function UserTrafficPage() {
               </TableRow>
             ) : (
               data.map((row) => (
-                <TableRow key={row.record_at}>
+                <TableRow key={row.record_at} className="border-b border-slate-100">
                   <TableCell>{formatUnixDay(row.record_at)}</TableCell>
-                  <TableCell>{formatBytes(row.u)}</TableCell>
-                  <TableCell>{formatBytes(row.d)}</TableCell>
-                  <TableCell>{formatBytes(row.u + row.d)}</TableCell>
-                  <TableCell>{row.server_rate}x</TableCell>
+                  <TableCell className="text-slate-600">{formatBytes(row.u)}</TableCell>
+                  <TableCell className="text-slate-600">{formatBytes(row.d)}</TableCell>
+                  <TableCell className="text-slate-600">{formatBytes(row.u + row.d)}</TableCell>
+                  <TableCell className="text-slate-600">{row.server_rate} x</TableCell>
                 </TableRow>
               ))
             )}

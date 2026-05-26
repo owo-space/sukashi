@@ -15,7 +15,7 @@ export function UserNoticePage() {
   if (isLoading) return <Skeleton className="h-64 w-full" />;
   if (!data || data.length === 0)
     return (
-      <Card>
+      <Card className="rounded border-slate-200">
         <CardContent>
           <EmptyState />
         </CardContent>
@@ -25,14 +25,14 @@ export function UserNoticePage() {
   return (
     <div className="flex flex-col gap-4">
       {data.map((n) => (
-        <Card key={n.id}>
-          <CardHeader>
-            <CardTitle className="text-base font-medium">{n.title}</CardTitle>
-            <div className="text-xs text-muted-foreground">{formatUnixDate(n.created_at)}</div>
+        <Card key={n.id} className="rounded border-slate-200">
+          <CardHeader className="border-b border-slate-100 py-3">
+            <CardTitle className="text-sm font-medium text-slate-700">{n.title}</CardTitle>
+            <div className="text-xs text-slate-500">{formatUnixDate(n.created_at)}</div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-4">
             <div
-              className="prose prose-sm max-w-none"
+              className="prose prose-sm max-w-none text-slate-700"
               dangerouslySetInnerHTML={{ __html: n.content }}
             />
           </CardContent>

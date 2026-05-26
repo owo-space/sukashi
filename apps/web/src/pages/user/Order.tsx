@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -17,14 +15,13 @@ import { apiGet } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
 import type { Order } from "@/lib/types";
 
-const STATUS: Record<number, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> =
-  {
-    0: { label: "待支付", variant: "secondary" },
-    1: { label: "处理中", variant: "default" },
-    2: { label: "已取消", variant: "outline" },
-    3: { label: "已完成", variant: "default" },
-    4: { label: "已折扣", variant: "outline" }
-  };
+const STATUS_LABEL: Record<number, { label: string; cls: string }> = {
+  0: { label: "待支付", cls: "border-slate-300 bg-slate-50 text-slate-600" },
+  1: { label: "已支付", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
+  2: { label: "已取消", cls: "border-slate-300 bg-slate-50 text-slate-500" },
+  3: { label: "已完成", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
+  4: { label: "已折扣", cls: "border-indigo-200 bg-indigo-50 text-indigo-600" }
+};
 
 const PERIOD_LABEL: Record<string, string> = {
   month_price: "月付",
@@ -44,18 +41,18 @@ export function UserOrderPage() {
   });
 
   return (
-    <Card>
+    <Card className="rounded border-slate-200">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>订单号</TableHead>
-              <TableHead>周期</TableHead>
-              <TableHead>订单金额</TableHead>
-              <TableHead>订单状态</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="w-12 text-slate-500">#</TableHead>
+              <TableHead className="text-slate-500">订单号</TableHead>
+              <TableHead className="text-slate-500">周期</TableHead>
+              <TableHead className="text-slate-500">订单金额</TableHead>
+              <TableHead className="text-slate-500">订单状态</TableHead>
+              <TableHead className="text-slate-500">创建时间</TableHead>
+              <TableHead className="text-right text-slate-500">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -73,23 +70,28 @@ export function UserOrderPage() {
               </TableRow>
             ) : (
               data.map((o, i) => {
-                const s = STATUS[o.status] ?? { label: String(o.status), variant: "outline" as const };
+                const s = STATUS_LABEL[o.status] ?? { label: String(o.status), cls: "" };
                 return (
-                  <TableRow key={o.id}>
-                    <TableCell>{i + 1}</TableCell>
+                  <TableRow key={o.id} className="border-b border-slate-100">
+                    <TableCell className="text-slate-600">{i + 1}</TableCell>
                     <TableCell className="font-mono text-xs">{o.trade_no}</TableCell>
-                    <TableCell>{PERIOD_LABEL[o.period] ?? o.period}</TableCell>
-                    <TableCell>¥ {formatCny(o.total_amount)}</TableCell>
+                    <TableCell className="text-slate-600">{PERIOD_LABEL[o.period] ?? o.period}</TableCell>
+                    <TableCell className="text-slate-600">¥ {formatCny(o.total_amount)}</TableCell>
                     <TableCell>
-                      <Badge variant={s.variant}>{s.label}</Badge>
+                      <span
+                        className={`inline-flex items-center rounded border px-2 py-0.5 text-xs ${s.cls}`}
+                      >
+                        {s.label}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatUnixDate(o.created_at)}
-                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">{formatUnixDate(o.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button asChild size="sm" variant="ghost">
-                        <Link to={`/order/${o.trade_no}`}>查看</Link>
-                      </Button>
+                      <Link
+                        to={`/order/${o.trade_no}`}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        查看
+                      </Link>
                     </TableCell>
                   </TableRow>
                 );

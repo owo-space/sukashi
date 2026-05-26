@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -12,24 +11,14 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
 import { NodeStatusDot } from "@/components/admin/NodeStatusDot";
+import { ProtocolChip } from "@/components/admin/ProtocolChip";
 import { apiGet } from "@/lib/api";
-
-const PROTOCOL_LABEL: Record<string, string> = {
-  shadowsocks: "Shadowsocks",
-  vless: "VLESS",
-  vmess: "VMess",
-  trojan: "Trojan",
-  hysteria2: "Hysteria2",
-  tuic: "TUIC",
-  anytls: "AnyTLS",
-  mieru: "Mieru",
-  snell: "Snell"
-};
+import type { Protocol } from "@/components/admin/protocols";
 
 interface UserNode {
   id: number;
   name: string;
-  protocol?: string;
+  protocol?: Protocol;
   rate?: string | number;
   tags?: string[];
   is_online?: number | boolean;
@@ -44,16 +33,16 @@ export function UserNodePage() {
   });
 
   return (
-    <Card>
+    <Card className="rounded border-slate-200">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>名称</TableHead>
-              <TableHead>协议</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>倍率</TableHead>
-              <TableHead>标签</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="text-slate-500">节点</TableHead>
+              <TableHead className="text-slate-500">协议</TableHead>
+              <TableHead className="text-slate-500">状态</TableHead>
+              <TableHead className="text-slate-500">倍率</TableHead>
+              <TableHead className="text-slate-500">标签</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -71,12 +60,10 @@ export function UserNodePage() {
               </TableRow>
             ) : (
               data.map((n) => (
-                <TableRow key={n.id}>
+                <TableRow key={n.id} className="border-b border-slate-100">
                   <TableCell className="font-medium">{n.name}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {PROTOCOL_LABEL[n.protocol ?? ""] ?? n.protocol ?? "—"}
-                    </Badge>
+                    <ProtocolChip protocol={n.protocol ?? "shadowsocks"} />
                   </TableCell>
                   <TableCell>
                     <NodeStatusDot
@@ -84,12 +71,19 @@ export function UserNodePage() {
                       isOnline={n.is_online ?? null}
                     />
                   </TableCell>
-                  <TableCell>{n.rate ?? 1}x</TableCell>
+                  <TableCell className="text-slate-600">
+                    <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                      {n.rate ?? 1} x
+                    </span>
+                  </TableCell>
                   <TableCell className="text-xs">
                     {(n.tags ?? []).map((t) => (
-                      <Badge key={t} variant="outline" className="mr-1">
+                      <span
+                        key={t}
+                        className="mr-1 inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-slate-600"
+                      >
                         {t}
-                      </Badge>
+                      </span>
                     ))}
                   </TableCell>
                 </TableRow>
