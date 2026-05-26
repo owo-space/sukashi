@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Sidebar, type SidebarSection } from "./Sidebar";
 import { HeaderBar } from "./HeaderBar";
-import { useTheme } from "@/lib/theme";
+import { useApplyTheme, useTheme } from "@/lib/theme";
 
 const sections: SidebarSection[] = [
   {
@@ -73,6 +73,7 @@ function titleFor(pathname: string): string {
 export function UserLayout() {
   const { pathname } = useLocation();
   const theme = useTheme();
+  useApplyTheme("frontend");
   return (
     <div className="flex min-h-screen bg-[#f0f2f5]">
       <Sidebar

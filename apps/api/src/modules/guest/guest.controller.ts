@@ -33,7 +33,12 @@ export class GuestCommController {
       frontend_theme_color: this.settings.getString("frontend_theme_color", "default"),
       frontend_theme_sidebar: this.settings.getString("frontend_theme_sidebar", "light"),
       frontend_theme_header: this.settings.getString("frontend_theme_header", "light"),
-      frontend_background_url: this.settings.getString("frontend_background_url", "")
+      frontend_background_url: this.settings.getString("frontend_background_url", ""),
+      // admin panel theme — separate keys so 主题配置 (admin) and 系统设置→
+      // 个性化 (user) don't fight over the same value.
+      admin_theme_color: this.settings.getString("admin_theme_color", "default"),
+      admin_theme_sidebar: this.settings.getString("admin_theme_sidebar", "light"),
+      admin_theme_header: this.settings.getString("admin_theme_header", "light")
     });
   }
 }

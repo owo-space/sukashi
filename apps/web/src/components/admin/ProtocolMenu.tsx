@@ -30,8 +30,8 @@ export function ProtocolMenu({
           <Plus className="size-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-32 p-1.5">
-        <div className="flex flex-col gap-1">
+      <PopoverContent align="start" className="w-36 p-3">
+        <div className="flex flex-col items-start gap-2.5">
           {PROTOCOL_ORDER.map((p) => {
             const spec = PROTOCOLS[p];
             return (
@@ -40,7 +40,7 @@ export function ProtocolMenu({
                 type="button"
                 onClick={() => onPick(p)}
                 className={cn(
-                  "inline-flex w-fit items-center justify-start rounded-md px-2 py-0.5 text-xs font-medium text-white transition-transform hover:scale-[1.02]",
+                  "inline-flex items-center justify-start rounded-md px-3 py-1 text-xs font-medium text-white shadow-sm transition-transform hover:scale-[1.03]",
                   spec.bg
                 )}
               >

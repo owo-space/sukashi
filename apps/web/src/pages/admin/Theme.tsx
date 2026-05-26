@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -18,11 +17,7 @@ import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 /**
- * Matches the panel-shell THEME_COLORS map exactly; do not hand-edit.
- *   default  → #0665d0   蓝色 (出厂)
- *   darkblue → #3b5998   暗蓝
- *   black    → #343a40   暗黑
- *   green    → #319795   青绿
+ * Matches the panel-shell THEME_COLORS map exactly.
  */
 const THEME_COLORS: Array<{ key: string; hex: string; label: string }> = [
   { key: "default", hex: "#0665d0", label: "默认蓝" },
@@ -32,12 +27,10 @@ const THEME_COLORS: Array<{ key: string; hex: string; label: string }> = [
 ];
 
 interface ConfigResponse {
-  frontend?: {
-    frontend_theme?: string;
-    frontend_theme_sidebar?: string;
-    frontend_theme_header?: string;
-    frontend_theme_color?: string;
-    frontend_background_url?: string | null;
+  admin?: {
+    admin_theme_sidebar?: string;
+    admin_theme_header?: string;
+    admin_theme_color?: string;
   };
   [k: string]: unknown;
 }
@@ -45,34 +38,33 @@ interface ConfigResponse {
 export function AdminThemePage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.config.fetch.frontend"],
-    queryFn: () => apiGet<ConfigResponse>("/admin/config/fetch", { params: { key: "frontend" } })
+    queryKey: ["admin.config.fetch.admin"],
+    queryFn: () => apiGet<ConfigResponse>("/admin/config/fetch", { params: { key: "admin" } })
   });
 
   const [color, setColor] = useState("default");
   const [sidebar, setSidebar] = useState("light");
-  const [header, setHeader] = useState("dark");
-  const [bg, setBg] = useState("");
+  const [header, setHeader] = useState("light");
 
   useEffect(() => {
-    const cfg = data?.frontend ?? {};
-    if (cfg.frontend_theme_color) setColor(cfg.frontend_theme_color);
-    if (cfg.frontend_theme_sidebar) setSidebar(cfg.frontend_theme_sidebar);
-    if (cfg.frontend_theme_header) setHeader(cfg.frontend_theme_header);
-    if (cfg.frontend_background_url) setBg(cfg.frontend_background_url);
+    const cfg = data?.admin ?? {};
+    if (cfg.admin_theme_color) setColor(cfg.admin_theme_color);
+    if (cfg.admin_theme_sidebar) setSidebar(cfg.admin_theme_sidebar);
+    if (cfg.admin_theme_header) setHeader(cfg.admin_theme_header);
   }, [data]);
 
   const save = useMutation({
     mutationFn: () =>
       apiPost("/admin/config/save", {
-        frontend_theme_color: color,
-        frontend_theme_sidebar: sidebar,
-        frontend_theme_header: header,
-        frontend_background_url: bg || null
+        admin_theme_color: color,
+        admin_theme_sidebar: sidebar,
+        admin_theme_header: header
       }),
     onSuccess: () => {
       toast.success("已保存");
-      qc.invalidateQueries({ queryKey: ["admin.config.fetch.frontend"] });
+      qc.invalidateQueries({ queryKey: ["admin.config.fetch.admin"] });
+      qc.invalidateQueries({ queryKey: ["theme.guest"] });
+      // also refresh ThemeProvider's cache by reloading config in the next tick
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
@@ -82,7 +74,10 @@ export function AdminThemePage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base font-medium">主题配置</CardTitle>
+        <CardTitle className="text-base font-medium">主题配置 — 管理端</CardTitle>
+        <div className="text-xs text-slate-500">
+          此处的设置只影响管理后台。用户端的样式请在「系统配置」→「个性化」中调整。
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
@@ -139,11 +134,6 @@ export function AdminThemePage() {
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="bg">背景图 URL (可选)</Label>
-          <Input id="bg" value={bg} onChange={(e) => setBg(e.target.value)} placeholder="https://..." />
         </div>
 
         <div>

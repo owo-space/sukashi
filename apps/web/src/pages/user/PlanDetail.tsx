@@ -36,9 +36,23 @@ export function UserPlanDetailPage() {
   });
 
   const verifyCoupon = useMutation({
-    mutationFn: () => apiPost<{ value: number; type: number }>("/user/coupon/check", { code: coupon }),
+    mutationFn: () => {
+      if (!period) throw new Error("请先选择购买周期");
+      return apiPost<{
+        id: number;
+        code: string;
+        name: string;
+        type: number;
+        value: number;
+        discount_amount?: number;
+      }>("/user/coupon/check", {
+        code: coupon,
+        plan_id: planId,
+        period
+      });
+    },
     onSuccess: (res) => {
-      setCouponOk(res);
+      setCouponOk({ type: res.type, value: res.value });
       toast.success("优惠券有效");
     },
     onError: (e) => {

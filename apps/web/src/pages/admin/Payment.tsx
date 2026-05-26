@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/EmptyState";
 import { RowActions } from "@/components/admin/RowActions";
 import { DataDrawer } from "@/components/admin/DataDrawer";
@@ -80,16 +79,6 @@ export function AdminPaymentPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Alert>
-        <AlertDescription>
-          Sukashi 仅支持 Stripe。请在 Stripe Dashboard → Developers → API keys 取得密钥,Webhook
-          地址指向{" "}
-          <code className="text-xs">
-            {window.location.origin}/api/v1/guest/payment/notify/Stripe/&lt;payment-uuid&gt;
-          </code>
-        </AlertDescription>
-      </Alert>
-
       <Card className="rounded">
         <CardContent className="p-0">
           <div className="px-6 py-3 border-b border-slate-100">
@@ -168,6 +157,15 @@ export function AdminPaymentPage() {
                           }}
                         >
                           编辑
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const url = `${window.location.origin}/api/v1/guest/payment/notify/Stripe/${p.uuid}`;
+                            void navigator.clipboard.writeText(url);
+                            toast.success("已复制 Webhook 地址");
+                          }}
+                        >
+                          复制 Webhook 地址
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem

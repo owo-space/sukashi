@@ -3,15 +3,21 @@ import { apiGet } from "./api";
 
 export type ThemeColor = "default" | "darkblue" | "black" | "green";
 export type ThemeSide = "light" | "dark";
+export type Panel = "frontend" | "admin";
 
 export interface ThemeConfig {
   app_name: string;
   app_description: string;
   logo: string;
+  /** user-facing panel — set via 系统设置 → 个性化 */
   frontend_theme_color: ThemeColor;
   frontend_theme_sidebar: ThemeSide;
   frontend_theme_header: ThemeSide;
   frontend_background_url: string;
+  /** admin panel — set via 主题配置 */
+  admin_theme_color: ThemeColor;
+  admin_theme_sidebar: ThemeSide;
+  admin_theme_header: ThemeSide;
 }
 
 /** matches the legacy panel-shell THEME_COLORS map */
@@ -22,17 +28,11 @@ const COLOR_HEX: Record<ThemeColor, string> = {
   green: "#319795"
 };
 
-/**
- * Convert a hex string into oklch components so Tailwind v4's
- * --primary CSS variable can swap without rebuilding.
- */
 function hexToOklch(hex: string): string {
-  // strip #
   const n = hex.replace("#", "");
   const r = parseInt(n.slice(0, 2), 16) / 255;
   const g = parseInt(n.slice(2, 4), 16) / 255;
   const b = parseInt(n.slice(4, 6), 16) / 255;
-  // Approximate sRGB → OKLCH via the well-known matrix (Björn Ottosson).
   const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   const lR = lin(r), lG = lin(g), lB = lin(b);
   const l = 0.4122214708 * lR + 0.5363325363 * lG + 0.0514459929 * lB;
@@ -47,6 +47,15 @@ function hexToOklch(hex: string): string {
   return `oklch(${L.toFixed(3)} ${C.toFixed(3)} ${H.toFixed(1)})`;
 }
 
+function darken(hex: string, factor: number): string {
+  const n = hex.replace("#", "");
+  const r = Math.round(parseInt(n.slice(0, 2), 16) * factor);
+  const g = Math.round(parseInt(n.slice(2, 4), 16) * factor);
+  const b = Math.round(parseInt(n.slice(4, 6), 16) * factor);
+  const to = (v: number) => v.toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
 const ThemeContext = createContext<ThemeConfig | null>(null);
 
 const DEFAULTS: ThemeConfig = {
@@ -56,7 +65,10 @@ const DEFAULTS: ThemeConfig = {
   frontend_theme_color: "default",
   frontend_theme_sidebar: "light",
   frontend_theme_header: "light",
-  frontend_background_url: ""
+  frontend_background_url: "",
+  admin_theme_color: "default",
+  admin_theme_sidebar: "light",
+  admin_theme_header: "light"
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -67,11 +79,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     apiGet<Partial<ThemeConfig>>("/guest/comm/config")
       .then((res) => {
         if (cancelled) return;
-        const next: ThemeConfig = { ...DEFAULTS, ...res };
-        setCfg(next);
-        applyTheme(next);
+        setCfg({ ...DEFAULTS, ...res });
       })
-      .catch(() => applyTheme(DEFAULTS));
+      .catch(() => {
+        /* keep defaults */
+      });
     return () => {
       cancelled = true;
     };
@@ -85,35 +97,42 @@ export function useTheme(): ThemeConfig {
 }
 
 /**
- * Build a slightly darker shade of the main hex (factor 0..1, lower = darker)
- * for the dark sidebar/header bg, so 深色 mode actually tracks the brand color
- * instead of falling back to a generic slate.
+ * Apply the chosen panel's theme to the global CSS variables. Layouts
+ * call this in a useEffect so navigating between admin and user side
+ * swaps the brand color / sidebar mode / header mode independently.
  */
-function darken(hex: string, factor = 0.6): string {
-  const n = hex.replace("#", "");
-  const r = Math.round(parseInt(n.slice(0, 2), 16) * factor);
-  const g = Math.round(parseInt(n.slice(2, 4), 16) * factor);
-  const b = Math.round(parseInt(n.slice(4, 6), 16) * factor);
-  const to = (v: number) => v.toString(16).padStart(2, "0");
-  return `#${to(r)}${to(g)}${to(b)}`;
-}
+export function useApplyTheme(panel: Panel): void {
+  const cfg = useTheme();
+  useEffect(() => {
+    const root = document.documentElement;
+    const color =
+      panel === "admin"
+        ? COLOR_HEX[cfg.admin_theme_color] ?? COLOR_HEX.default
+        : COLOR_HEX[cfg.frontend_theme_color] ?? COLOR_HEX.default;
+    const sidebar = panel === "admin" ? cfg.admin_theme_sidebar : cfg.frontend_theme_sidebar;
+    const header = panel === "admin" ? cfg.admin_theme_header : cfg.frontend_theme_header;
 
-function applyTheme(cfg: ThemeConfig) {
-  const root = document.documentElement;
-  const color = COLOR_HEX[cfg.frontend_theme_color] ?? COLOR_HEX.default;
-  const oklch = hexToOklch(color);
-  root.style.setProperty("--primary", oklch);
-  root.style.setProperty("--ring", oklch);
-  root.style.setProperty("--chart-1", oklch);
-  root.style.setProperty("--sidebar-primary", oklch);
-  root.style.setProperty("--sidebar-ring", oklch);
-  root.style.setProperty("--sidebar-accent-foreground", oklch);
+    const oklch = hexToOklch(color);
+    root.style.setProperty("--primary", oklch);
+    root.style.setProperty("--ring", oklch);
+    root.style.setProperty("--chart-1", oklch);
+    root.style.setProperty("--sidebar-primary", oklch);
+    root.style.setProperty("--sidebar-ring", oklch);
+    root.style.setProperty("--sidebar-accent-foreground", oklch);
+    root.style.setProperty("--brand-dark-bg", darken(color, 0.55));
+    root.style.setProperty("--brand-darker-bg", darken(color, 0.35));
 
-  // dark sidebar/header bg uses a darker shade of the primary color
-  root.style.setProperty("--brand-dark-bg", darken(color, 0.55));
-  root.style.setProperty("--brand-darker-bg", darken(color, 0.35));
-
-  root.dataset.sidebar = cfg.frontend_theme_sidebar;
-  root.dataset.header = cfg.frontend_theme_header;
-  document.title = cfg.app_name;
+    root.dataset.sidebar = sidebar;
+    root.dataset.header = header;
+    document.title = cfg.app_name;
+  }, [
+    panel,
+    cfg.admin_theme_color,
+    cfg.admin_theme_sidebar,
+    cfg.admin_theme_header,
+    cfg.frontend_theme_color,
+    cfg.frontend_theme_sidebar,
+    cfg.frontend_theme_header,
+    cfg.app_name
+  ]);
 }

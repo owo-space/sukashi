@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { useTheme } from "@/lib/theme";
+import { useApplyTheme, useTheme } from "@/lib/theme";
 
 export function AuthCard({
   children,
@@ -11,6 +11,7 @@ export function AuthCard({
   footerLeft?: ReactNode;
 }) {
   const theme = useTheme();
+  useApplyTheme("frontend");
   const hasBg = Boolean(theme.frontend_background_url);
   return (
     <div

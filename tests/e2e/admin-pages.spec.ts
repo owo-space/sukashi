@@ -39,9 +39,8 @@ test.describe("admin pages render + interact", () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible();
   });
 
-  test("payment Stripe-only alert", async ({ page }) => {
+  test("payment add Stripe drawer", async ({ page }) => {
     await page.goto("/admin/payment");
-    await expect(page.getByText(/Sukashi 仅支持 Stripe/)).toBeVisible();
     await page.getByRole("button", { name: /添加 Stripe/ }).click();
     await expect(page.locator('[role="dialog"]')).toBeVisible();
   });

@@ -62,12 +62,16 @@ export const SETTING_DEFAULTS: Record<string, unknown> = {
   show_info_to_server_enable: 0,
   show_subscribe_method: 0,
   show_subscribe_expire: 5,
-  // frontend
+  // frontend (user-facing panel)
   frontend_theme: "default",
   frontend_theme_sidebar: "light",
   frontend_theme_header: "dark",
   frontend_theme_color: "default",
   frontend_background_url: null,
+  // admin panel theme (separate from user-facing)
+  admin_theme_sidebar: "light",
+  admin_theme_header: "light",
+  admin_theme_color: "default",
   // server
   server_api_url: null,
   server_token: null,
@@ -169,6 +173,7 @@ export const SETTING_GROUPS: Record<string, string[]> = {
     "frontend_theme_color",
     "frontend_background_url"
   ],
+  admin: ["admin_theme_sidebar", "admin_theme_header", "admin_theme_color"],
   server: [
     "server_api_url",
     "server_token",
