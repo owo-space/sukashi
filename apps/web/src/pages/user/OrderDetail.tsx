@@ -1,147 +1,99 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Card, Chip, Skeleton } from "@heroui/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Alert, Button, Card, Descriptions, Select, Skeleton, Space, Tag, Typography } from "antd";
+import dayjs from "dayjs";
 import { apiGet, apiPost } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
-import { formatCents, formatUnix } from "@/lib/format";
+import { formatCents } from "@/lib/format";
 import type { Order, PaymentMethod } from "@/lib/types";
 
-const STATUS: Record<number, { label: string; color: "default" | "success" | "warning" | "danger" }> = {
-  0: { label: "待支付", color: "warning" },
-  1: { label: "处理中", color: "default" },
-  2: { label: "已取消", color: "danger" },
-  3: { label: "已支付", color: "success" },
-  4: { label: "已退款", color: "default" }
+const STATUS: Record<number, { label: string; color: string }> = {
+  0: { label: "待支付", color: "orange" },
+  1: { label: "开通中", color: "blue" },
+  2: { label: "已取消", color: "default" },
+  3: { label: "已完成", color: "green" },
+  4: { label: "已折抵", color: "purple" }
 };
 
 export function OrderDetailPage() {
   const { tradeNo } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [paying, setPaying] = useState<number | null>(null);
+  const qc = useQueryClient();
+  const [paymentId, setPaymentId] = useState<number | undefined>();
   const [error, setError] = useState<string | null>(null);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ["user", "order", "detail", tradeNo],
-    queryFn: () => apiGet<Order & { plan?: { name?: string } }>(`/user/order/detail?trade_no=${tradeNo}`)
+    queryFn: () => apiGet<Order>(`/user/order/detail?trade_no=${tradeNo}`)
   });
   const { data: methods } = useQuery({
     queryKey: ["user", "order", "getPaymentMethod"],
     queryFn: () => apiGet<PaymentMethod[]>("/user/order/getPaymentMethod")
   });
 
-  const cancel = useMutation({
-    mutationFn: () => apiPost("/user/order/cancel", { trade_no: tradeNo }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["user", "order", "detail", tradeNo] });
-    }
-  });
-
-  async function pay(methodId: number) {
-    setError(null);
-    setPaying(methodId);
-    try {
-      const result = await apiPost<{ type: string; data: string } | true>(
-        "/user/order/checkout",
-        { trade_no: tradeNo, method: methodId }
-      );
-      if (result === true) {
-        void queryClient.invalidateQueries({ queryKey: ["user", "order", "detail", tradeNo] });
-      } else if (result && typeof result === "object" && result.type === "url" && typeof result.data === "string") {
-        window.location.href = result.data;
+  const checkout = useMutation({
+    mutationFn: () =>
+      apiPost<{ type: number; data: string }>("/user/order/checkout", {
+        trade_no: tradeNo,
+        method: paymentId
+      }),
+    onSuccess: (res) => {
+      if (res?.type === 1 && typeof res.data === "string") {
+        window.location.href = res.data;
       } else {
-        setError("支付通道返回异常");
+        void qc.invalidateQueries({ queryKey: ["user", "order"] });
       }
-    } catch (err) {
+    },
+    onError: (err: unknown) => {
       setError(
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
           "支付失败"
       );
-    } finally {
-      setPaying(null);
     }
-  }
+  });
 
-  if (isLoading) return <Skeleton className="h-48 w-full rounded-xl" />;
-  if (!order) {
-    return (
-      <>
-        <PageHeader title="订单详情" />
-        <Alert variant="danger">订单不存在</Alert>
-      </>
-    );
-  }
+  if (isLoading) return <Skeleton active />;
+  if (!order) return <Alert type="error" message="订单不存在" showIcon />;
 
-  const status = STATUS[order.status] ?? STATUS[0]!;
+  const status = STATUS[order.status] ?? { label: String(order.status), color: "default" };
+
   return (
-    <>
-      <PageHeader
-        title="订单详情"
-        actions={
-          <Button variant="tertiary" onPress={() => navigate("/order")}>
-            返回订单列表
-          </Button>
-        }
-      />
-      <Card>
-        <Card.Content className="space-y-3">
-          <Row label="订单号" value={<span className="font-mono">{order.trade_no}</span>} />
-          <Row label="订阅" value={order.plan?.name ?? "-"} />
-          <Row label="周期" value={order.period} />
-          <Row label="金额" value={formatCents(order.total_amount)} />
-          <Row
-            label="状态"
-            value={<Chip variant="default" color={status.color}>{status.label}</Chip>}
-          />
-          <Row label="创建时间" value={formatUnix(order.created_at)} />
-          {order.paid_at ? <Row label="支付时间" value={formatUnix(order.paid_at)} /> : null}
-        </Card.Content>
-      </Card>
-
+    <Card title={`订单 ${order.trade_no}`} size="small">
+      {error ? <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} /> : null}
+      <Descriptions column={1} size="small" bordered>
+        <Descriptions.Item label="状态">
+          <Tag color={status.color}>{status.label}</Tag>
+        </Descriptions.Item>
+        <Descriptions.Item label="订阅">{order.plan?.name ?? "-"}</Descriptions.Item>
+        <Descriptions.Item label="周期">{order.period}</Descriptions.Item>
+        <Descriptions.Item label="金额">{formatCents(order.total_amount)}</Descriptions.Item>
+        <Descriptions.Item label="创建时间">
+          {dayjs.unix(order.created_at).format("YYYY-MM-DD HH:mm")}
+        </Descriptions.Item>
+      </Descriptions>
       {order.status === 0 ? (
-        <Card className="mt-4">
-          <Card.Header>
-            <Card.Title>支付订单</Card.Title>
-            <Card.Description>选择支付方式继续付款。</Card.Description>
-          </Card.Header>
-          <Card.Content>
-            {error ? (
-              <Alert variant="danger" className="mb-3" title="错误">
-                {error}
-              </Alert>
-            ) : null}
-            {!methods || methods.length === 0 ? (
-              <Alert variant="warning">管理员尚未配置任何支付方式。</Alert>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {methods.map((m) => (
-                  <Button
-                    key={m.id}
-                    variant="secondary"
-                    isPending={paying === m.id}
-                    onPress={() => pay(m.id)}
-                  >
-                    {m.name}
-                  </Button>
-                ))}
-                <Button variant="tertiary" onPress={() => cancel.mutate()}>
-                  取消订单
-                </Button>
-              </div>
-            )}
-          </Card.Content>
-        </Card>
+        <Space style={{ marginTop: 16 }}>
+          <Select
+            placeholder="选择支付方式"
+            style={{ width: 200 }}
+            value={paymentId}
+            onChange={setPaymentId}
+            options={(methods ?? []).map((m) => ({ value: m.id, label: m.name }))}
+          />
+          <Button
+            type="primary"
+            disabled={!paymentId}
+            loading={checkout.isPending}
+            onClick={() => {
+              setError(null);
+              checkout.mutate();
+            }}
+          >
+            立即支付
+          </Button>
+          <Button onClick={() => navigate("/order")}>返回</Button>
+        </Space>
       ) : null}
-    </>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-default-100 pb-2 last:border-0 last:pb-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="text-sm">{value}</span>
-    </div>
+    </Card>
   );
 }

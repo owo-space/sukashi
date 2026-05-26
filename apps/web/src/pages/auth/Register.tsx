@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Alert, Button, FieldError, Form, Input, Label, TextField } from "@heroui/react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Alert, Button, Form, Input } from "antd";
 import { useAuth } from "@/lib/auth";
 import { apiGet, apiPost } from "@/lib/api";
 import type { GuestConfig } from "@/lib/types";
@@ -10,6 +10,12 @@ export function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [search] = useSearchParams();
+  const [form] = Form.useForm<{
+    email: string;
+    password: string;
+    invite_code?: string;
+    email_code?: string;
+  }>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
@@ -25,7 +31,8 @@ export function RegisterPage() {
   const inviteForced = config?.is_invite_force === 1;
   const inviteFromUrl = search.get("code") || "";
 
-  async function sendEmailCode(email: string) {
+  async function sendEmailCode() {
+    const email = form.getFieldValue("email") as string | undefined;
     if (!email) return;
     setSendingCode(true);
     try {
@@ -35,18 +42,24 @@ export function RegisterPage() {
     }
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onFinish(values: {
+    email: string;
+    password: string;
+    invite_code?: string;
+    email_code?: string;
+  }) {
     setError(null);
     setLoading(true);
-    const data = new FormData(e.currentTarget);
     try {
-      await register({
-        email: String(data.get("email") ?? ""),
-        password: String(data.get("password") ?? ""),
-        invite_code: String(data.get("invite_code") ?? "") || undefined,
-        email_code: String(data.get("email_code") ?? "") || undefined
-      });
+      const payload: {
+        email: string;
+        password: string;
+        invite_code?: string;
+        email_code?: string;
+      } = { email: values.email, password: values.password };
+      if (values.invite_code) payload.invite_code = values.invite_code;
+      if (values.email_code) payload.email_code = values.email_code;
+      await register(payload);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(
@@ -59,61 +72,66 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthShell title="注册">
-      <Form className="flex flex-col gap-4" onSubmit={onSubmit}>
-        {error ? (
-          <Alert variant="danger" title="注册失败">
-            {error}
-          </Alert>
-        ) : null}
-        <TextField isRequired name="email" type="email">
-          <Label>邮箱</Label>
-          <Input id="reg-email" autoComplete="email" placeholder="you@example.com" />
-          <FieldError />
-        </TextField>
-        {needEmailVerify ? (
-          <div className="flex items-end gap-2">
-            <TextField isRequired name="email_code" className="flex-1">
-              <Label>邮箱验证码</Label>
-              <Input placeholder="6 位数字" />
-              <FieldError />
-            </TextField>
-            <Button
-              variant="secondary"
-              isPending={sendingCode}
-              onPress={() => {
-                const el = document.getElementById("reg-email") as HTMLInputElement | null;
-                void sendEmailCode(el?.value ?? "");
-              }}
-            >
-              发送验证码
-            </Button>
-          </div>
-        ) : null}
-        <TextField isRequired name="password" type="password">
-          <Label>密码</Label>
-          <Input autoComplete="new-password" placeholder="至少 8 位" />
-          <FieldError />
-        </TextField>
-        <TextField
-          name="invite_code"
-          isRequired={inviteForced}
-          defaultValue={inviteFromUrl}
+    <AuthShell title="注册" subtitle="自由への道">
+      {error ? (
+        <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+      ) : null}
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        requiredMark={false}
+        initialValues={{ invite_code: inviteFromUrl }}
+      >
+        <Form.Item
+          name="email"
+          rules={[{ required: true, type: "email", message: "请输入正确的邮箱" }]}
         >
-          <Label>{inviteForced ? "邀请码（必填）" : "邀请码（可选）"}</Label>
-          <Input placeholder="如有邀请码请填写" />
-          <FieldError />
-        </TextField>
-        <Button type="submit" isPending={loading} className="w-full">
-          注册
-        </Button>
-        <div className="text-sm">
-          已有账号？
-          <Link className="ml-1 text-primary hover:underline" to="/login">
-            返回登录
-          </Link>
-        </div>
+          <Input placeholder="邮箱" size="large" autoComplete="email" />
+        </Form.Item>
+        {needEmailVerify ? (
+          <Form.Item
+            name="email_code"
+            rules={[{ required: true, message: "请输入邮箱验证码" }]}
+          >
+            <Input.Search
+              placeholder="邮箱验证码"
+              size="large"
+              enterButton={<span>{sendingCode ? "发送中" : "发送验证码"}</span>}
+              onSearch={() => void sendEmailCode()}
+              loading={sendingCode}
+            />
+          </Form.Item>
+        ) : null}
+        <Form.Item
+          name="password"
+          rules={[
+            { required: true, message: "请输入密码" },
+            { min: 8, message: "密码至少 8 位" }
+          ]}
+        >
+          <Input.Password placeholder="密码" size="large" autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item
+          name="invite_code"
+          rules={inviteForced ? [{ required: true, message: "请输入邀请码" }] : []}
+        >
+          <Input
+            placeholder={inviteForced ? "邀请码（必填）" : "邀请码（可选）"}
+            size="large"
+          />
+        </Form.Item>
+        <Form.Item style={{ marginBottom: 12 }}>
+          <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+            注册
+          </Button>
+        </Form.Item>
       </Form>
+      <div className="sukashi-auth-footer">
+        <span>
+          已有账号？<Link to="/login">返回登入</Link>
+        </span>
+      </div>
     </AuthShell>
   );
 }

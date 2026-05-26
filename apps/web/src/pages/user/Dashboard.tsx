@@ -1,21 +1,20 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, ProgressBar, Skeleton } from "@heroui/react";
-import { Activity, Bell, ShoppingCart, Ticket as TicketIcon } from "lucide-react";
+import { Card, Col, Progress, Row, Skeleton, Typography } from "antd";
+import {
+  BookOutlined,
+  ClockCircleOutlined,
+  CustomerServiceOutlined,
+  WifiOutlined
+} from "@ant-design/icons";
 import { apiGet } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
-import { Snippet } from "@/components/Snippet";
-import { formatBytes, formatExpiry, bytesToGB } from "@/lib/format";
+import { formatBytes, bytesToGB } from "@/lib/format";
 import type { UserInfo, Notice } from "@/lib/types";
 
 export function DashboardPage() {
   const { data: info, isLoading: loadingInfo } = useQuery({
     queryKey: ["user", "getSubscribe"],
     queryFn: () => apiGet<UserInfo>("/user/getSubscribe")
-  });
-  const { data: stat } = useQuery({
-    queryKey: ["user", "getStat"],
-    queryFn: () => apiGet<number[]>("/user/getStat")
   });
   const { data: notices } = useQuery({
     queryKey: ["user", "notice", "fetch"],
@@ -27,116 +26,76 @@ export function DashboardPage() {
   const usedPct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
 
   return (
-    <>
-      <PageHeader title="仪表盘" description="查看你的订阅状态、流量使用情况以及最新公告。" />
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <Card.Header>
-            <Card.Title>当前订阅</Card.Title>
-          </Card.Header>
-          <Card.Content>
-            {loadingInfo ? (
-              <Skeleton className="h-20 w-full rounded-md" />
-            ) : (
-              <div className="space-y-2">
-                <div className="text-2xl font-semibold">
-                  {info?.plan_name ?? "暂未订阅"}
-                </div>
-                <div className="text-sm text-muted">
-                  到期时间：{formatExpiry(info?.expired_at ?? null)}
-                </div>
-                <Button as={Link} {...{ to: "/plan" }} size="sm" variant="secondary">
-                  查看可用订阅
-                </Button>
-              </div>
-            )}
-          </Card.Content>
-        </Card>
-        <Card>
-          <Card.Header>
-            <Card.Title>流量使用</Card.Title>
-          </Card.Header>
-          <Card.Content>
-            {loadingInfo ? (
-              <Skeleton className="h-20 w-full rounded-md" />
-            ) : (
-              <>
-                <ProgressBar value={usedPct} className="mb-2" aria-label="traffic usage" />
-                <div className="text-sm text-muted">
-                  {formatBytes(used)} / {formatBytes(total)} ({bytesToGB(total).toFixed(1)} GB)
-                </div>
-              </>
-            )}
-          </Card.Content>
-        </Card>
-        <Card>
-          <Card.Header>
-            <Card.Title>账户状态</Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <Stat icon={<ShoppingCart className="size-5" />} label="未支付" value={stat?.[0] ?? 0} />
-              <Stat icon={<TicketIcon className="size-5" />} label="待回复" value={stat?.[1] ?? 0} />
-              <Stat icon={<Activity className="size-5" />} label="邀请" value={stat?.[2] ?? 0} />
-            </div>
-          </Card.Content>
-        </Card>
-      </div>
-
-      <Card className="mt-4">
-        <Card.Header>
-          <Card.Title>订阅链接</Card.Title>
-          <Card.Description>把下面的链接复制到 Clash/Shadowrocket/SingBox 等客户端导入。</Card.Description>
-        </Card.Header>
-        <Card.Content>
-          {info?.subscribe_url ? (
-            <Snippet className="w-full">{info.subscribe_url}</Snippet>
-          ) : (
-            <Skeleton className="h-10 w-full" />
-          )}
-        </Card.Content>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <Card title="我的订阅" size="small">
+        {loadingInfo ? (
+          <Skeleton active />
+        ) : (
+          <>
+            <Typography.Title level={5} style={{ marginTop: 0 }}>
+              {info?.plan_name ?? "暂未订阅"}
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              {info?.expired_at ? "该订阅按期付费" : "该订阅长期有效"}
+            </Typography.Text>
+            <Progress percent={usedPct} showInfo={false} style={{ marginTop: 12 }} />
+            <Typography.Text>
+              已用 {formatBytes(used)} / 总计 {bytesToGB(total).toFixed(2)} GB · 在线设备 0/∞
+            </Typography.Text>
+          </>
+        )}
       </Card>
-
+      <Card title="捷径" size="small">
+        <Shortcut to="/knowledge" icon={<BookOutlined />} title="查看教程" desc="学习如何使用 透かし" />
+        <Shortcut to="/plan" icon={<WifiOutlined />} title="一键订阅" desc="快速将节点导入对应客户端进行使用" />
+        <Shortcut to="/plan" icon={<ClockCircleOutlined />} title="续费订阅" desc="对您当前的订阅进行续费" />
+        <Shortcut to="/ticket" icon={<CustomerServiceOutlined />} title="遇到问题" desc="遇到问题可以通过工单与我们沟通" />
+      </Card>
       {notices && notices.length > 0 ? (
-        <Card className="mt-4">
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2">
-              <Bell className="size-4" /> 最新公告
-            </Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <ul className="divide-y divide-default-200">
-              {notices.slice(0, 5).map((n) => (
-                <li key={n.id} className="py-2">
-                  <div className="font-medium">{n.title}</div>
-                  <div
-                    className="prose prose-sm mt-1 max-w-none text-sm text-muted"
-                    dangerouslySetInnerHTML={{ __html: n.content }}
-                  />
-                </li>
-              ))}
-            </ul>
-          </Card.Content>
+        <Card title="最新公告" size="small">
+          {notices.slice(0, 5).map((n) => (
+            <div key={n.id} style={{ paddingBottom: 12, marginBottom: 12, borderBottom: "1px solid #f0f0f0" }}>
+              <Typography.Text strong>{n.title}</Typography.Text>
+              <div
+                style={{ marginTop: 4, color: "rgba(0,0,0,0.55)" }}
+                dangerouslySetInnerHTML={{ __html: n.content }}
+              />
+            </div>
+          ))}
         </Card>
       ) : null}
-    </>
+    </div>
   );
 }
 
-function Stat({
+function Shortcut({
+  to,
   icon,
-  label,
-  value
+  title,
+  desc
 }: {
+  to: string;
   icon: React.ReactNode;
-  label: string;
-  value: number;
+  title: string;
+  desc: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 rounded-md bg-default-100 py-2">
-      <div className="text-default-500">{icon}</div>
-      <div className="text-lg font-semibold">{value}</div>
-      <div className="text-xs text-muted">{label}</div>
-    </div>
+    <Link
+      to={to}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "14px 0",
+        borderBottom: "1px solid #f0f0f0",
+        color: "inherit"
+      }}
+    >
+      <div>
+        <div style={{ fontWeight: 500 }}>{title}</div>
+        <div style={{ color: "rgba(0,0,0,0.45)", fontSize: 13 }}>{desc}</div>
+      </div>
+      <div style={{ fontSize: 24, color: "rgba(0,0,0,0.45)" }}>{icon}</div>
+    </Link>
   );
 }

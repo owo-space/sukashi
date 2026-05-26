@@ -1,86 +1,60 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, Chip, Skeleton, Table } from "@heroui/react";
-import { Plus } from "lucide-react";
+import { Button, Card, Table, Tag } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
 import { apiGet } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
-import { EmptyState } from "@/components/EmptyState";
-import { formatUnix } from "@/lib/format";
 import type { Ticket } from "@/lib/types";
 
-const STATUS: Record<number, { label: string; color: "default" | "success" | "warning" | "danger" }> = {
-  0: { label: "处理中", color: "warning" },
-  1: { label: "已关闭", color: "default" }
-};
-
-const LEVEL: Record<number, { label: string; color: "default" | "success" | "warning" | "danger" }> = {
-  0: { label: "低", color: "default" },
-  1: { label: "中", color: "warning" },
-  2: { label: "高", color: "danger" }
-};
+const LEVEL = ["低", "中", "高"];
+const STATUS = ["待回复", "已回复", "已关闭"];
 
 export function TicketPage() {
-  const navigate = useNavigate();
   const { data, isLoading } = useQuery({
     queryKey: ["user", "ticket", "fetch"],
     queryFn: () => apiGet<Ticket[]>("/user/ticket/fetch")
   });
 
   return (
-    <>
-      <PageHeader
-        title="我的工单"
-        actions={
-          <Button onPress={() => navigate("/ticket/new")}>
-            <Plus className="size-4" />
+    <Card
+      title="我的工单"
+      size="small"
+      extra={
+        <Link to="/ticket/new">
+          <Button type="primary" icon={<PlusOutlined />}>
             新建工单
           </Button>
-        }
+        </Link>
+      }
+    >
+      <Table<Ticket>
+        rowKey="id"
+        loading={isLoading}
+        dataSource={data ?? []}
+        pagination={{ pageSize: 10 }}
+        columns={[
+          {
+            title: "主题",
+            dataIndex: "subject",
+            render: (s: string, row) => <Link to={`/ticket/${row.id}`}>{s}</Link>
+          },
+          { title: "级别", dataIndex: "level", render: (l: number) => LEVEL[l] ?? l },
+          {
+            title: "状态",
+            dataIndex: "status",
+            render: (s: number) => (
+              <Tag color={s === 0 ? "orange" : s === 1 ? "blue" : "default"}>
+                {STATUS[s] ?? s}
+              </Tag>
+            )
+          },
+          {
+            title: "创建时间",
+            dataIndex: "created_at",
+            render: (t: number) => dayjs.unix(t).format("YYYY-MM-DD HH:mm")
+          }
+        ]}
       />
-      <Card>
-        <Card.Content className="p-0">
-          {isLoading ? (
-            <Skeleton className="h-48 w-full" />
-          ) : !data || data.length === 0 ? (
-            <EmptyState title="暂无工单" />
-          ) : (
-            <Table className="dense-table">
-              <Table.ScrollContainer>
-                <Table.Content aria-label="工单列表">
-                  <Table.Header>
-                    <Table.Column isRowHeader>标题</Table.Column>
-                    <Table.Column>级别</Table.Column>
-                    <Table.Column>状态</Table.Column>
-                    <Table.Column>最后更新</Table.Column>
-                  </Table.Header>
-                  <Table.Body>
-                    {data.map((t) => {
-                      const s = STATUS[t.status] ?? STATUS[0]!;
-                      const l = LEVEL[t.level] ?? LEVEL[0]!;
-                      return (
-                        <Table.Row key={t.id}>
-                          <Table.Cell>
-                            <Link to={`/ticket/${t.id}`} className="text-primary hover:underline">
-                              {t.subject}
-                            </Link>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Chip variant="default" color={l.color}>{l.label}</Chip>
-                          </Table.Cell>
-                          <Table.Cell>
-                            <Chip variant="default" color={s.color}>{s.label}</Chip>
-                          </Table.Cell>
-                          <Table.Cell>{formatUnix(t.updated_at)}</Table.Cell>
-                        </Table.Row>
-                      );
-                    })}
-                  </Table.Body>
-                </Table.Content>
-              </Table.ScrollContainer>
-            </Table>
-          )}
-        </Card.Content>
-      </Card>
-    </>
+    </Card>
   );
 }

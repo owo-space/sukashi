@@ -1,140 +1,179 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  Gauge,
-  Users,
-  Box,
-  Server,
-  Receipt,
-  CreditCard,
-  Ticket,
-  BookOpen,
-  Bell,
-  Gift,
-  Tag,
-  Settings,
-  LogOut,
-  Menu
-} from "lucide-react";
-import { Avatar, Button, Dropdown } from "@heroui/react";
+  ApartmentOutlined,
+  BookOutlined,
+  ContainerOutlined,
+  ControlOutlined,
+  CreditCardOutlined,
+  CustomerServiceOutlined,
+  DashboardOutlined,
+  GiftOutlined,
+  LogoutOutlined,
+  NotificationOutlined,
+  PartitionOutlined,
+  SettingOutlined,
+  ShoppingOutlined,
+  SkinOutlined,
+  TagsOutlined,
+  TeamOutlined,
+  UserOutlined
+} from "@ant-design/icons";
+import { Avatar, Dropdown, Layout, Menu } from "antd";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
+
+const { Header, Sider, Content } = Layout;
 
 interface Item {
-  to: string;
+  key: string;
+  icon: React.ReactNode;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  group?: string;
 }
 
 const NAV: Item[] = [
-  { to: "/admin/dashboard", label: "概览", icon: Gauge },
-  { to: "/admin/user", label: "用户", icon: Users },
-  { to: "/admin/plan", label: "订阅", icon: Box },
-  { to: "/admin/server", label: "节点", icon: Server },
-  { to: "/admin/order", label: "订单", icon: Receipt },
-  { to: "/admin/payment", label: "支付", icon: CreditCard },
-  { to: "/admin/coupon", label: "优惠券", icon: Tag },
-  { to: "/admin/giftcard", label: "礼品卡", icon: Gift },
-  { to: "/admin/ticket", label: "工单", icon: Ticket },
-  { to: "/admin/knowledge", label: "知识库", icon: BookOpen },
-  { to: "/admin/notice", label: "公告", icon: Bell },
-  { to: "/admin/setting", label: "系统设置", icon: Settings }
+  { key: "/admin/dashboard", icon: <DashboardOutlined />, label: "仪表盘" },
+  { key: "/admin/setting", icon: <ControlOutlined />, label: "系统配置", group: "设置" },
+  { key: "/admin/payment", icon: <CreditCardOutlined />, label: "支付配置", group: "设置" },
+  { key: "/admin/theme", icon: <SkinOutlined />, label: "主题配置", group: "设置" },
+  { key: "/admin/server", icon: <ApartmentOutlined />, label: "节点管理", group: "服务器" },
+  { key: "/admin/server/group", icon: <TeamOutlined />, label: "权限组管理", group: "服务器" },
+  { key: "/admin/server/route", icon: <PartitionOutlined />, label: "路由管理", group: "服务器" },
+  { key: "/admin/plan", icon: <ShoppingOutlined />, label: "订阅管理", group: "财务" },
+  { key: "/admin/order", icon: <ContainerOutlined />, label: "订单管理", group: "财务" },
+  { key: "/admin/coupon", icon: <TagsOutlined />, label: "优惠券管理", group: "财务" },
+  { key: "/admin/giftcard", icon: <GiftOutlined />, label: "礼品卡管理", group: "财务" },
+  { key: "/admin/user", icon: <UserOutlined />, label: "用户管理", group: "用户" },
+  { key: "/admin/notice", icon: <NotificationOutlined />, label: "公告管理", group: "用户" },
+  { key: "/admin/ticket", icon: <CustomerServiceOutlined />, label: "工单管理", group: "用户" },
+  { key: "/admin/knowledge", icon: <BookOutlined />, label: "知识库管理", group: "用户" }
 ];
+
+function buildMenu() {
+  const groups = new Map<string | undefined, Item[]>();
+  for (const it of NAV) {
+    const list = groups.get(it.group) ?? [];
+    list.push(it);
+    groups.set(it.group, list);
+  }
+  const items: NonNullable<React.ComponentProps<typeof Menu>["items"]> = [];
+  for (const [group, list] of groups.entries()) {
+    if (!group) {
+      for (const it of list) {
+        items.push({
+          key: it.key,
+          icon: it.icon,
+          label: <Link to={it.key}>{it.label}</Link>
+        });
+      }
+    } else {
+      items.push({ type: "group", key: `g-${group}`, label: group });
+      for (const it of list) {
+        items.push({
+          key: it.key,
+          icon: it.icon,
+          label: <Link to={it.key}>{it.label}</Link>
+        });
+      }
+    }
+  }
+  return items;
+}
 
 export function AdminLayout() {
   const { logout } = useAuth();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const items = useMemo(() => buildMenu(), []);
+  const selected = useMemo(() => {
+    // exact-match by longest prefix
+    const match = NAV.slice()
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((n) => location.pathname.startsWith(n.key));
+    return match ? [match.key] : [];
+  }, [location.pathname]);
+  const title =
+    NAV.slice()
+      .sort((a, b) => b.key.length - a.key.length)
+      .find((n) => location.pathname.startsWith(n.key))?.label ?? "管理后台";
 
   return (
-    <div className="flex min-h-full bg-default-50">
-      <aside
-        className={`${
-          open ? "block" : "hidden"
-        } fixed inset-y-0 left-0 z-40 w-60 border-r border-default-200 bg-foreground text-background md:static md:block`}
+    <Layout style={{ minHeight: "100vh" }}>
+      <Sider
+        width={225}
+        breakpoint="lg"
+        collapsedWidth={0}
+        theme="dark"
+        style={{ background: "#001529" }}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-default-800/40 px-4">
-          <img alt="logo" className="size-7" src="/favicon.svg" />
-          <span className="text-base font-semibold">透かし · 管理后台</span>
-        </div>
-        <nav className="flex flex-col gap-0.5 p-3">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-background/80 hover:bg-default-800/40 hover:text-background"
-                  }`
-                }
-              >
-                <Icon className="size-4" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-          <NavLink
-            to="/dashboard"
-            className="mt-2 flex items-center gap-2 rounded-lg border border-dashed border-default-700 px-3 py-2 text-sm text-background/70 hover:bg-default-800/40"
-          >
-            ← 返回用户端
-          </NavLink>
-        </nav>
-      </aside>
-
-      {open ? (
         <div
-          className="fixed inset-0 z-30 bg-black/30 md:hidden"
-          onClick={() => setOpen(false)}
+          style={{
+            height: 64,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            fontSize: 20,
+            fontWeight: 500,
+            background: "#3b5998"
+          }}
+        >
+          透かし
+        </div>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={selected}
+          items={items}
+          style={{ background: "#001529" }}
         />
-      ) : null}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-default-200 bg-background/95 px-4 backdrop-blur md:px-6">
-          <Button
-            isIconOnly
-            size="sm"
-            variant="ghost"
-            onPress={() => setOpen((v) => !v)}
-            className="md:hidden"
-            aria-label="toggle nav"
-          >
-            <Menu className="size-4" />
-          </Button>
-          <div className="flex-1" />
-          <Dropdown>
-            <Dropdown.Trigger>
-              <button
-                type="button"
-                className="flex items-center gap-2 rounded-full px-2 py-1 text-sm hover:bg-default-100"
-              >
-                <Avatar size="sm" />
-                <span className="hidden sm:inline">管理员</span>
-              </button>
-            </Dropdown.Trigger>
-            <Dropdown.Popover>
-              <Dropdown.Menu>
-                <Dropdown.Item
-                  onAction={() => {
+      </Sider>
+      <Layout>
+        <Header
+          style={{
+            background: "#fff",
+            padding: "0 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderBottom: "1px solid #f0f0f0"
+          }}
+        >
+          <span style={{ fontSize: 16 }}>{title}</span>
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "user",
+                  icon: <DashboardOutlined />,
+                  label: "用户面板",
+                  onClick: () => navigate("/dashboard")
+                },
+                { type: "divider" as const },
+                {
+                  key: "logout",
+                  icon: <LogoutOutlined />,
+                  label: "退出登录",
+                  onClick: () => {
                     logout();
                     navigate("/login", { replace: true });
-                  }}
-                >
-                  <LogOut className="size-4" />
-                  退出登录
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown.Popover>
+                  }
+                }
+              ]
+            }}
+          >
+            <span
+              style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 8 }}
+            >
+              <Avatar size="small" icon={<UserOutlined />} />
+              <span>管理员</span>
+            </span>
           </Dropdown>
-        </header>
-        <main className="flex-1 px-4 py-6 md:px-6">
+        </Header>
+        <Content style={{ margin: 16, padding: 16, background: "#fff" }}>
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </Content>
+      </Layout>
+    </Layout>
   );
 }

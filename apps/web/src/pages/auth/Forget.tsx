@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Alert, Button, FieldError, Form, Input, Label, TextField } from "@heroui/react";
+import { Link, useNavigate } from "react-router-dom";
+import { Alert, Button, Form, Input } from "antd";
 import { useAuth } from "@/lib/auth";
 import { apiPost } from "@/lib/api";
 import { AuthShell } from "./Login";
@@ -8,11 +8,13 @@ import { AuthShell } from "./Login";
 export function ForgetPage() {
   const { forget } = useAuth();
   const navigate = useNavigate();
+  const [form] = Form.useForm<{ email: string; password: string; email_code: string }>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
 
-  async function sendCode(email: string) {
+  async function sendCode() {
+    const email = form.getFieldValue("email") as string | undefined;
     if (!email) return;
     setSending(true);
     try {
@@ -22,17 +24,11 @@ export function ForgetPage() {
     }
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onFinish(values: { email: string; password: string; email_code: string }) {
     setError(null);
     setLoading(true);
-    const data = new FormData(e.currentTarget);
     try {
-      await forget({
-        email: String(data.get("email") ?? ""),
-        password: String(data.get("password") ?? ""),
-        email_code: String(data.get("email_code") ?? "")
-      });
+      await forget(values);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(
@@ -45,49 +41,49 @@ export function ForgetPage() {
   }
 
   return (
-    <AuthShell title="重置密码">
-      <Form className="flex flex-col gap-4" onSubmit={onSubmit}>
-        {error ? (
-          <Alert variant="danger" title="重置失败">
-            {error}
-          </Alert>
-        ) : null}
-        <TextField isRequired name="email" type="email">
-          <Label>邮箱</Label>
-          <Input id="forget-email" autoComplete="email" placeholder="you@example.com" />
-          <FieldError />
-        </TextField>
-        <div className="flex items-end gap-2">
-          <TextField isRequired name="email_code" className="flex-1">
-            <Label>邮箱验证码</Label>
-            <Input placeholder="6 位数字" />
-            <FieldError />
-          </TextField>
-          <Button
-            variant="secondary"
-            isPending={sending}
-            onPress={() => {
-              const el = document.getElementById("forget-email") as HTMLInputElement | null;
-              void sendCode(el?.value ?? "");
-            }}
-          >
-            发送验证码
+    <AuthShell title="重置密码" subtitle="自由への道">
+      {error ? (
+        <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />
+      ) : null}
+      <Form form={form} layout="vertical" onFinish={onFinish} requiredMark={false}>
+        <Form.Item
+          name="email"
+          rules={[{ required: true, type: "email", message: "请输入正确的邮箱" }]}
+        >
+          <Input placeholder="邮箱" size="large" autoComplete="email" />
+        </Form.Item>
+        <Form.Item
+          name="email_code"
+          rules={[{ required: true, message: "请输入邮箱验证码" }]}
+        >
+          <Input.Search
+            placeholder="邮箱验证码"
+            size="large"
+            enterButton={<span>{sending ? "发送中" : "发送验证码"}</span>}
+            onSearch={() => void sendCode()}
+            loading={sending}
+          />
+        </Form.Item>
+        <Form.Item
+          name="password"
+          rules={[
+            { required: true, message: "请输入新密码" },
+            { min: 8, message: "密码至少 8 位" }
+          ]}
+        >
+          <Input.Password placeholder="新密码" size="large" autoComplete="new-password" />
+        </Form.Item>
+        <Form.Item style={{ marginBottom: 12 }}>
+          <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+            重置密码
           </Button>
-        </div>
-        <TextField isRequired name="password" type="password">
-          <Label>新密码</Label>
-          <Input autoComplete="new-password" placeholder="至少 8 位" />
-          <FieldError />
-        </TextField>
-        <Button type="submit" isPending={loading} className="w-full">
-          重置密码
-        </Button>
-        <div className="text-sm">
-          <Link className="text-primary hover:underline" to="/login">
-            返回登录
-          </Link>
-        </div>
+        </Form.Item>
       </Form>
+      <div className="sukashi-auth-footer">
+        <span>
+          <Link to="/login">返回登入</Link>
+        </span>
+      </div>
     </AuthShell>
   );
 }

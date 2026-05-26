@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, Skeleton } from "@heroui/react";
+import { Card, List, Skeleton } from "antd";
+import dayjs from "dayjs";
 import { apiGet } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
-import { formatUnix } from "@/lib/format";
 import type { Notice } from "@/lib/types";
 
 export function NoticePage() {
@@ -12,34 +11,26 @@ export function NoticePage() {
     queryFn: () => apiGet<Notice[]>("/user/notice/fetch")
   });
 
-  if (isLoading) return <Skeleton className="h-48 w-full rounded-xl" />;
+  if (isLoading) return <Skeleton active />;
+  if (!data || data.length === 0) return <EmptyState title="暂无公告" />;
 
   return (
-    <>
-      <PageHeader title="公告" />
-      {!data || data.length === 0 ? (
-        <EmptyState title="暂无公告" />
-      ) : (
-        <div className="space-y-3">
-          {data.map((n) => (
-            <Card key={n.id}>
-              <Card.Header>
-                <Card.Title>{n.title}</Card.Title>
-                <Card.Description>{formatUnix(n.created_at)}</Card.Description>
-              </Card.Header>
-              <Card.Content>
-                {n.img_url ? (
-                  <img src={n.img_url} alt="" className="mb-3 max-h-64 rounded-md" />
-                ) : null}
-                <div
-                  className="prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: n.content }}
-                />
-              </Card.Content>
-            </Card>
-          ))}
-        </div>
-      )}
-    </>
+    <Card title="公告" size="small">
+      <List
+        dataSource={data}
+        renderItem={(n) => (
+          <List.Item style={{ display: "block" }}>
+            <div style={{ fontWeight: 500 }}>{n.title}</div>
+            <div style={{ color: "rgba(0,0,0,0.45)", fontSize: 12 }}>
+              {dayjs.unix(n.created_at).format("YYYY-MM-DD HH:mm")}
+            </div>
+            <div
+              style={{ marginTop: 8 }}
+              dangerouslySetInnerHTML={{ __html: n.content }}
+            />
+          </List.Item>
+        )}
+      />
+    </Card>
   );
 }

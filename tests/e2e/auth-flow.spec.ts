@@ -16,7 +16,7 @@ test.describe("Auth gating (no login required)", () => {
     await page.goto("/login");
     await expect(page.getByText(/邮箱/)).toBeVisible();
     await expect(page.getByText(/密码/).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: /^登录$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^登入$/ })).toBeVisible();
     await ctx.close();
   });
 });
@@ -38,17 +38,17 @@ test.describe("Authenticated SPA pages render", () => {
 
   for (const path of [
     "/admin",
-    "/admin/users",
-    "/admin/plans",
-    "/admin/servers",
-    "/admin/orders",
-    "/admin/payments",
-    "/admin/coupons",
-    "/admin/giftcards",
-    "/admin/tickets",
+    "/admin/user",
+    "/admin/plan",
+    "/admin/server",
+    "/admin/order",
+    "/admin/payment",
+    "/admin/coupon",
+    "/admin/giftcard",
+    "/admin/ticket",
     "/admin/knowledge",
-    "/admin/notices",
-    "/admin/settings"
+    "/admin/notice",
+    "/admin/setting"
   ]) {
     test(`admin page ${path}`, async ({ page }) => {
       const errors: string[] = [];

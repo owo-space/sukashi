@@ -24,7 +24,7 @@ test.describe("SPA shell", () => {
       "/notice",
       "/traffic",
       "/admin",
-      "/admin/users"
+      "/admin/user"
     ]) {
       test(`GET ${path}`, async ({ request }) => {
         const res = await request.get(path);

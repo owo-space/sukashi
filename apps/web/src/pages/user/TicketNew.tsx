@@ -1,30 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, Card, FieldError, Form, Input, Label, ListBox, Select, TextArea, TextField } from "@heroui/react";
+import { Alert, Button, Card, Form, Input, Select } from "antd";
 import { apiPost } from "@/lib/api";
-import { PageHeader } from "@/components/PageHeader";
 
 export function TicketNewPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [level, setLevel] = useState("1");
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onFinish(v: { subject: string; level: number; message: string }) {
     setError(null);
     setLoading(true);
-    const fd = new FormData(e.currentTarget);
     try {
-      await apiPost("/user/ticket/save", {
-        subject: fd.get("subject"),
-        message: fd.get("message"),
-        level: Number(level)
-      });
+      await apiPost("/user/ticket/save", v);
       navigate("/ticket");
     } catch (err) {
       setError(
-        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? "创建失败"
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+          "创建失败"
       );
     } finally {
       setLoading(false);
@@ -32,42 +25,33 @@ export function TicketNewPage() {
   }
 
   return (
-    <>
-      <PageHeader title="新建工单" />
-      <Card>
-        <Card.Content>
-          <Form className="flex max-w-2xl flex-col gap-4" onSubmit={onSubmit}>
-            {error ? <Alert variant="danger" title="提交失败">{error}</Alert> : null}
-            <TextField isRequired name="subject">
-              <Label>标题</Label>
-              <Input placeholder="一句话概括你的问题" />
-              <FieldError />
-            </TextField>
-            <Select selectedKey={level} onSelectionChange={(k) => setLevel(String(k))}>
-              <Label>级别</Label>
-              <Select.Trigger>
-                <Select.Value />
-                <Select.Indicator />
-              </Select.Trigger>
-              <Select.Popover>
-                <ListBox>
-                  <ListBox.Item id="0" textValue="低">低<ListBox.ItemIndicator /></ListBox.Item>
-                  <ListBox.Item id="1" textValue="中">中<ListBox.ItemIndicator /></ListBox.Item>
-                  <ListBox.Item id="2" textValue="高">高<ListBox.ItemIndicator /></ListBox.Item>
-                </ListBox>
-              </Select.Popover>
-            </Select>
-            <div>
-              <Label>详细描述</Label>
-              <TextArea name="message" placeholder="请描述你遇到的问题…" rows={8} />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" isPending={loading}>提交</Button>
-              <Button variant="tertiary" onPress={() => navigate("/ticket")}>取消</Button>
-            </div>
-          </Form>
-        </Card.Content>
-      </Card>
-    </>
+    <Card title="新建工单" size="small">
+      {error ? <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} /> : null}
+      <Form
+        layout="vertical"
+        onFinish={onFinish}
+        initialValues={{ level: 1 }}
+        style={{ maxWidth: 560 }}
+      >
+        <Form.Item name="subject" label="主题" rules={[{ required: true }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="level" label="级别" rules={[{ required: true }]}>
+          <Select
+            options={[
+              { value: 0, label: "低" },
+              { value: 1, label: "中" },
+              { value: 2, label: "高" }
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="message" label="内容" rules={[{ required: true }]}>
+          <Input.TextArea rows={5} />
+        </Form.Item>
+        <Button type="primary" htmlType="submit" loading={loading}>
+          提交
+        </Button>
+      </Form>
+    </Card>
   );
 }
