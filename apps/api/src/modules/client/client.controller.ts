@@ -326,9 +326,30 @@ function buildGeneralLink(uuid: string, server: ServerNode): string | null {
       return buildAnytlsUri(uuid, server);
     case "mieru":
       return buildMieruSimpleUri(uuid, server);
+    case "snell":
+      return buildSnellSurgeLine(uuid, server);
     default:
       return null;
   }
+}
+
+/**
+ * Snell node — exported in Surge's "name = snell, host, port, psk=..."
+ * configuration line shape. Mihomo also reads this verbatim when the
+ * subscription is parsed as plain text. For panels that build sing-box,
+ * Snell isn't a sing-box outbound type so we still emit nothing there.
+ */
+function buildSnellSurgeLine(uuid: string, server: ServerNode): string {
+  const parts = [
+    `${server.name} = snell`,
+    server.host,
+    String(clientPort(server)),
+    `psk=${uuid}`,
+    "version=4"
+  ];
+  if (server.obfs) parts.push(`obfs=${server.obfs}`);
+  if (server.obfsPassword) parts.push(`obfs-host=${server.obfsPassword}`);
+  return parts.join(", ");
 }
 
 function buildShadowrocketLink(uuid: string, server: ServerNode): string | null {
@@ -421,6 +442,21 @@ function buildMihomoYaml(uuid: string, servers: ServerNode[]): string {
       lines.push(`    sni: ${yamlString(serverNameOf(server))}`);
       lines.push(`    congestion-controller: ${yamlString(server.congestionControl ?? "bbr")}`);
       lines.push(`    udp-relay-mode: ${yamlString(server.udpRelayMode ?? "native")}`);
+      continue;
+    }
+    if (protocol === "snell") {
+      lines.push("    type: snell");
+      lines.push(`    server: ${yamlString(server.host)}`);
+      lines.push(`    port: ${clientPort(server)}`);
+      lines.push(`    psk: ${yamlString(uuid)}`);
+      lines.push("    version: 4");
+      if (server.obfs) {
+        lines.push("    obfs-opts:");
+        lines.push(`      mode: ${yamlString(server.obfs)}`);
+        if (server.obfsPassword) {
+          lines.push(`      host: ${yamlString(server.obfsPassword)}`);
+        }
+      }
       continue;
     }
   }

@@ -1,14 +1,41 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Webhook } from "lucide-react";
+import { Copy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+
+/**
+ * Common currencies the panel offers. Stripe expects lowercase ISO 4217;
+ * we display uppercase to the admin. Order roughly by relevance for CN /
+ * APAC operators.
+ */
+const CURRENCIES = [
+  "cny",
+  "usd",
+  "hkd",
+  "twd",
+  "jpy",
+  "krw",
+  "sgd",
+  "eur",
+  "gbp",
+  "aud",
+  "cad",
+  "nzd"
+] as const;
 
 interface AdminPayment {
   id: number;
@@ -56,7 +83,7 @@ export function AdminPaymentPage() {
       stripe_public_key: "",
       stripe_secret_key: "",
       stripe_webhook_secret: "",
-      currency: "usd"
+      currency: "cny"
     }
   }));
 
@@ -71,7 +98,7 @@ export function AdminPaymentPage() {
           stripe_public_key: row.config?.stripe_public_key ?? "",
           stripe_secret_key: row.config?.stripe_secret_key ?? "",
           stripe_webhook_secret: row.config?.stripe_webhook_secret ?? "",
-          currency: row.config?.currency ?? "usd"
+          currency: (row.config?.currency ?? "cny").toLowerCase()
         }
       });
     }
@@ -118,24 +145,13 @@ export function AdminPaymentPage() {
         <CardHeader className="border-b border-slate-100 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-sm font-medium text-slate-700">Stripe 支付配置</CardTitle>
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="flex items-center gap-2 text-sm text-slate-600">
-                启用
-                <Switch
-                  checked={Boolean(form.enable)}
-                  onCheckedChange={(c) => setForm((s) => ({ ...s, enable: c ? 1 : 0 }))}
-                />
-              </label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyWebhook}
-                disabled={!form.uuid}
-              >
-                <Webhook className="size-4" />
-                复制 Webhook 地址
-              </Button>
-            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              启用
+              <Switch
+                checked={Boolean(form.enable)}
+                onCheckedChange={(c) => setForm((s) => ({ ...s, enable: c ? 1 : 0 }))}
+              />
+            </label>
           </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 py-5 md:grid-cols-2">
@@ -145,12 +161,22 @@ export function AdminPaymentPage() {
               onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
             />
           </Field>
-          <Field label="货币 (lowercase ISO 4217)" hint="例如 usd / cny / hkd">
-            <Input
+          <Field label="货币" hint="Stripe 结算用的币种">
+            <Select
               value={form.config.currency}
-              onChange={(e) => setCfg("currency", e.target.value)}
-              placeholder="usd"
-            />
+              onValueChange={(v) => setCfg("currency", v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="选择货币" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c.toUpperCase()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <Field label="Stripe Publishable Key" hint="pk_live_... / pk_test_...">
             <Input
