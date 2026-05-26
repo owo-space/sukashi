@@ -5,7 +5,6 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { LoginPage } from "@/pages/auth/Login";
 import { RegisterPage } from "@/pages/auth/Register";
 import { ForgetPage } from "@/pages/auth/Forget";
-import { Placeholder } from "@/pages/Placeholder";
 
 import { UserDashboardPage } from "@/pages/user/Dashboard";
 import { UserPlanPage } from "@/pages/user/Plan";
@@ -22,6 +21,22 @@ import { UserKnowledgeDetailPage } from "@/pages/user/KnowledgeDetail";
 import { UserNoticePage } from "@/pages/user/Notice";
 import { UserTrafficPage } from "@/pages/user/Traffic";
 import { UserNodePage } from "@/pages/user/Node";
+
+import { AdminDashboardPage } from "@/pages/admin/Dashboard";
+import { AdminUserPage } from "@/pages/admin/User";
+import { AdminPlanPage } from "@/pages/admin/Plan";
+import { AdminServerPage } from "@/pages/admin/Server";
+import { AdminServerGroupPage } from "@/pages/admin/ServerGroup";
+import { AdminServerRoutePage } from "@/pages/admin/ServerRoute";
+import { AdminOrderPage } from "@/pages/admin/Order";
+import { AdminPaymentPage } from "@/pages/admin/Payment";
+import { AdminCouponPage } from "@/pages/admin/Coupon";
+import { AdminGiftcardPage } from "@/pages/admin/Giftcard";
+import { AdminTicketPage } from "@/pages/admin/Ticket";
+import { AdminKnowledgePage } from "@/pages/admin/Knowledge";
+import { AdminNoticePage } from "@/pages/admin/Notice";
+import { AdminSettingPage } from "@/pages/admin/Setting";
+import { AdminThemePage } from "@/pages/admin/Theme";
 
 export function App() {
   return (
@@ -63,21 +78,21 @@ export function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Placeholder title="仪表盘" />} />
-        <Route path="setting" element={<Placeholder title="系统配置" />} />
-        <Route path="payment" element={<Placeholder title="支付配置" />} />
-        <Route path="theme" element={<Placeholder title="主题配置" />} />
-        <Route path="server" element={<Placeholder title="节点管理" />} />
-        <Route path="server-group" element={<Placeholder title="权限组管理" />} />
-        <Route path="server-route" element={<Placeholder title="路由管理" />} />
-        <Route path="plan" element={<Placeholder title="订阅管理" />} />
-        <Route path="order" element={<Placeholder title="订单管理" />} />
-        <Route path="coupon" element={<Placeholder title="优惠券管理" />} />
-        <Route path="giftcard" element={<Placeholder title="礼品卡管理" />} />
-        <Route path="user" element={<Placeholder title="用户管理" />} />
-        <Route path="notice" element={<Placeholder title="公告管理" />} />
-        <Route path="ticket" element={<Placeholder title="工单管理" />} />
-        <Route path="knowledge" element={<Placeholder title="知识库管理" />} />
+        <Route index element={<AdminDashboardPage />} />
+        <Route path="setting" element={<AdminSettingPage />} />
+        <Route path="payment" element={<AdminPaymentPage />} />
+        <Route path="theme" element={<AdminThemePage />} />
+        <Route path="server" element={<AdminServerPage />} />
+        <Route path="server-group" element={<AdminServerGroupPage />} />
+        <Route path="server-route" element={<AdminServerRoutePage />} />
+        <Route path="plan" element={<AdminPlanPage />} />
+        <Route path="order" element={<AdminOrderPage />} />
+        <Route path="coupon" element={<AdminCouponPage />} />
+        <Route path="giftcard" element={<AdminGiftcardPage />} />
+        <Route path="user" element={<AdminUserPage />} />
+        <Route path="notice" element={<AdminNoticePage />} />
+        <Route path="ticket" element={<AdminTicketPage />} />
+        <Route path="knowledge" element={<AdminKnowledgePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
