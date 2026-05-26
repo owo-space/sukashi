@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Settings, User, ChevronDown } from "lucide-react";
+import { LogOut, Menu, Settings, User, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,15 @@ interface ProfileInfo {
   is_admin?: boolean | number;
 }
 
-export function HeaderBar({ title, settingsHref }: { title: string; settingsHref?: string }) {
+export function HeaderBar({
+  title,
+  settingsHref,
+  onMenuClick
+}: {
+  title: string;
+  settingsHref?: string;
+  onMenuClick?: () => void;
+}) {
   const { logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { data } = useQuery({
@@ -43,9 +51,23 @@ export function HeaderBar({ title, settingsHref }: { title: string; settingsHref
 
   return (
     <header
-      className="flex h-14 items-center justify-between bg-white border-b border-slate-200 px-6 [html[data-header=dark]_&]:border-transparent [html[data-header=dark]_&]:text-white [html[data-header=dark]_&]:[background:var(--brand-dark-bg)]"
+      className="flex h-14 items-center justify-between gap-3 bg-white border-b border-slate-200 px-4 md:px-6 [html[data-header=dark]_&]:border-transparent [html[data-header=dark]_&]:text-white [html[data-header=dark]_&]:[background:var(--brand-dark-bg)]"
     >
-      <h1 className="text-[15px] text-slate-700 [html[data-header=dark]_&]:text-white">{title}</h1>
+      <div className="flex min-w-0 items-center gap-2">
+        {onMenuClick ? (
+          <button
+            type="button"
+            aria-label="菜单"
+            onClick={onMenuClick}
+            className="rounded p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 md:hidden [html[data-header=dark]_&]:text-white/80 [html[data-header=dark]_&]:hover:bg-white/10"
+          >
+            <Menu className="size-5" />
+          </button>
+        ) : null}
+        <h1 className="truncate text-[15px] text-slate-700 [html[data-header=dark]_&]:text-white">
+          {title}
+        </h1>
+      </div>
       <div className="flex items-center gap-4">
         {settingsHref ? (
           <Link

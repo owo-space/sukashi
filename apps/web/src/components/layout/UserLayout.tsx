@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import {
   Gauge,
@@ -74,16 +75,19 @@ export function UserLayout() {
   const { pathname } = useLocation();
   const theme = useTheme();
   useApplyTheme("frontend");
+  const [mobileOpen, setMobileOpen] = useState(false);
   return (
     <div className="flex min-h-screen bg-[#f0f2f5]">
       <Sidebar
         title={theme.app_name}
         version={`${theme.app_name} v${import.meta.env.VITE_PANEL_VERSION ?? "1.7.6"}`}
         sections={sections}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
       />
-      <div className="flex flex-1 flex-col">
-        <HeaderBar title={titleFor(pathname)} />
-        <main className="flex-1 p-6">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <HeaderBar title={titleFor(pathname)} onMenuClick={() => setMobileOpen(true)} />
+        <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

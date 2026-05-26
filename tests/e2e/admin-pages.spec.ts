@@ -39,10 +39,10 @@ test.describe("admin pages render + interact", () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible();
   });
 
-  test("payment add Stripe drawer", async ({ page }) => {
+  test("payment Stripe single-config page", async ({ page }) => {
     await page.goto("/admin/payment");
-    await page.getByRole("button", { name: /添加 Stripe/ }).click();
-    await expect(page.locator('[role="dialog"]')).toBeVisible();
+    await expect(page.getByText("Stripe 支付配置")).toBeVisible();
+    await expect(page.getByText("Webhook 接收地址")).toBeVisible();
   });
 
   test("coupon generate", async ({ page }) => {

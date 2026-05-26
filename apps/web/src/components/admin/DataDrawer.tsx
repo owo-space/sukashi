@@ -42,8 +42,10 @@ export function DataDrawer({
       <SheetContent
         side="right"
         showCloseButton={false}
-        className={cn("flex flex-col gap-0 p-0 sm:max-w-none")}
-        style={{ width }}
+        className={cn(
+          "flex w-full flex-col gap-0 p-0 max-w-full sm:max-w-none"
+        )}
+        style={{ width: `min(${width}px, 100vw)` }}
       >
         <header className="flex items-center justify-between border-b px-6 py-4">
           <SheetTitle className="text-base font-medium">{title}</SheetTitle>

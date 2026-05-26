@@ -1,24 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Copy, Webhook } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
-import { EmptyState } from "@/components/EmptyState";
-import { RowActions } from "@/components/admin/RowActions";
-import { DataDrawer } from "@/components/admin/DataDrawer";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 
 interface AdminPayment {
@@ -35,6 +24,11 @@ interface AdminPayment {
   };
 }
 
+/**
+ * Sukashi is intentionally Stripe-only. There is exactly one payment row
+ * (or none) — no list, no "添加 Stripe" button. The admin lands on the
+ * single config form for that row directly.
+ */
 export function AdminPaymentPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -42,201 +36,170 @@ export function AdminPaymentPage() {
     queryFn: () => apiGet<AdminPayment[]>("/admin/payment/fetch")
   });
 
-  const [editing, setEditing] = useState<{ mode: "create" | "edit"; row?: AdminPayment } | null>(
-    null
-  );
-  const [form, setForm] = useState<Record<string, unknown>>({
+  const row = (data ?? [])[0] ?? null;
+
+  const [form, setForm] = useState<{
+    id?: number;
+    uuid?: string;
+    name: string;
+    enable: 0 | 1;
+    config: {
+      stripe_public_key: string;
+      stripe_secret_key: string;
+      stripe_webhook_secret: string;
+      currency: string;
+    };
+  }>(() => ({
     name: "Stripe",
-    payment: "Stripe",
     enable: 1,
-    config: { currency: "usd" }
-  });
+    config: {
+      stripe_public_key: "",
+      stripe_secret_key: "",
+      stripe_webhook_secret: "",
+      currency: "usd"
+    }
+  }));
+
+  useEffect(() => {
+    if (row) {
+      setForm({
+        id: row.id,
+        uuid: row.uuid,
+        name: row.name ?? "Stripe",
+        enable: row.enable ? 1 : 0,
+        config: {
+          stripe_public_key: row.config?.stripe_public_key ?? "",
+          stripe_secret_key: row.config?.stripe_secret_key ?? "",
+          stripe_webhook_secret: row.config?.stripe_webhook_secret ?? "",
+          currency: row.config?.currency ?? "usd"
+        }
+      });
+    }
+  }, [row?.id]);
 
   const save = useMutation({
-    mutationFn: () => apiPost("/admin/payment/save", form),
+    mutationFn: () =>
+      apiPost("/admin/payment/save", {
+        ...(form.id ? { id: form.id, uuid: form.uuid } : {}),
+        name: form.name,
+        payment: "Stripe",
+        enable: form.enable,
+        config: form.config
+      }),
     onSuccess: () => {
       toast.success("已保存");
-      setEditing(null);
       qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
-  const showToggle = useMutation({
-    mutationFn: (p: AdminPayment) =>
-      apiPost("/admin/payment/show", { id: p.id, show: p.enable ? 0 : 1 }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] })
-  });
-  const drop = useMutation({
-    mutationFn: (id: number) => apiPost("/admin/payment/drop", { id }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] })
-  });
 
-  const cfg = (form.config as Record<string, string>) ?? {};
+  const webhookUrl = form.uuid
+    ? `${window.location.origin}/api/v1/guest/payment/notify/Stripe/${form.uuid}`
+    : "(保存后生成)";
 
-  function setConfig(key: string, value: string) {
-    setForm((f) => ({ ...f, config: { ...(f.config as object), [key]: value } }));
+  async function copyWebhook() {
+    if (!form.uuid) {
+      toast.error("请先保存,生成 uuid 后再复制");
+      return;
+    }
+    await navigator.clipboard.writeText(webhookUrl);
+    toast.success("已复制 Webhook 地址");
   }
+
+  function setCfg<K extends keyof typeof form.config>(k: K, v: string) {
+    setForm((s) => ({ ...s, config: { ...s.config, [k]: v } }));
+  }
+
+  if (isLoading) return <Skeleton className="h-96 w-full" />;
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded">
-        <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-9 gap-1"
-              onClick={() => {
-                setForm({
-                  name: "Stripe",
-                  payment: "Stripe",
-                  enable: 1,
-                  config: { currency: "usd" }
-                });
-                setEditing({ mode: "create" });
-              }}
-            >
-              <Plus className="size-4" />
-              添加 Stripe
-            </Button>
+      <Card className="rounded border-slate-200">
+        <CardHeader className="border-b border-slate-100 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-sm font-medium text-slate-700">Stripe 支付配置</CardTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                启用
+                <Switch
+                  checked={Boolean(form.enable)}
+                  onCheckedChange={(c) => setForm((s) => ({ ...s, enable: c ? 1 : 0 }))}
+                />
+              </label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyWebhook}
+                disabled={!form.uuid}
+              >
+                <Webhook className="size-4" />
+                复制 Webhook 地址
+              </Button>
+            </div>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">名称</TableHead>
-                <TableHead className="text-slate-500">类型</TableHead>
-                <TableHead className="text-slate-500">状态</TableHead>
-                <TableHead className="text-slate-500">UUID</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={6}>
-                    <Skeleton className="h-8 w-full" />
-                  </TableCell>
-                </TableRow>
-              ) : !data || data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6}>
-                    <EmptyState message="尚未配置支付方式" />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.map((p) => (
-                  <TableRow key={p.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{p.id}</TableCell>
-                    <TableCell>{p.name}</TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600">
-                        {p.payment}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Switch
-                        checked={Boolean(p.enable)}
-                        onCheckedChange={() => showToggle.mutate(p)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500">{p.uuid}</TableCell>
-                    <TableCell className="text-right">
-                      <RowActions>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setForm({
-                              id: p.id,
-                              uuid: p.uuid,
-                              name: p.name,
-                              payment: p.payment,
-                              enable: p.enable ? 1 : 0,
-                              config: p.config ?? {}
-                            });
-                            setEditing({ mode: "edit", row: p });
-                          }}
-                        >
-                          编辑
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            const url = `${window.location.origin}/api/v1/guest/payment/notify/Stripe/${p.uuid}`;
-                            void navigator.clipboard.writeText(url);
-                            toast.success("已复制 Webhook 地址");
-                          }}
-                        >
-                          复制 Webhook 地址
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm(`删除 "${p.name}"？`)) drop.mutate(p.id);
-                          }}
-                        >
-                          删除
-                        </DropdownMenuItem>
-                      </RowActions>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <DataDrawer
-        open={editing !== null}
-        onOpenChange={(o) => !o && setEditing(null)}
-        title={editing?.mode === "edit" ? "编辑支付方式" : "添加支付方式"}
-        submitting={save.isPending}
-        onSubmit={() => save.mutate()}
-      >
-        <div className="flex flex-col gap-3">
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 py-5 md:grid-cols-2">
           <Field label="名称" required>
             <Input
-              value={String(form.name ?? "")}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              value={form.name}
+              onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
             />
           </Field>
-          <Field label="Stripe Publishable Key">
+          <Field label="货币 (lowercase ISO 4217)" hint="例如 usd / cny / hkd">
             <Input
-              placeholder="pk_live_..."
-              value={cfg.stripe_public_key ?? ""}
-              onChange={(e) => setConfig("stripe_public_key", e.target.value)}
+              value={form.config.currency}
+              onChange={(e) => setCfg("currency", e.target.value)}
+              placeholder="usd"
             />
           </Field>
-          <Field label="Stripe Secret Key" required>
+          <Field label="Stripe Publishable Key" hint="pk_live_... / pk_test_...">
+            <Input
+              value={form.config.stripe_public_key}
+              onChange={(e) => setCfg("stripe_public_key", e.target.value)}
+              placeholder="pk_live_..."
+            />
+          </Field>
+          <Field label="Stripe Secret Key" required hint="sk_live_... / sk_test_...">
             <Input
               type="password"
+              value={form.config.stripe_secret_key}
+              onChange={(e) => setCfg("stripe_secret_key", e.target.value)}
               placeholder="sk_live_..."
-              value={cfg.stripe_secret_key ?? ""}
-              onChange={(e) => setConfig("stripe_secret_key", e.target.value)}
             />
           </Field>
-          <Field label="Webhook Signing Secret">
+          <Field
+            label="Webhook Signing Secret"
+            hint="Stripe Dashboard → Webhooks → 选你建的端点 → Signing secret"
+            span={2}
+          >
             <Input
+              value={form.config.stripe_webhook_secret}
+              onChange={(e) => setCfg("stripe_webhook_secret", e.target.value)}
               placeholder="whsec_..."
-              value={cfg.stripe_webhook_secret ?? ""}
-              onChange={(e) => setConfig("stripe_webhook_secret", e.target.value)}
             />
           </Field>
-          <Field label="货币 (lowercase ISO 4217)">
-            <Input
-              placeholder="usd / cny / hkd"
-              value={cfg.currency ?? "usd"}
-              onChange={(e) => setConfig("currency", e.target.value)}
-            />
+          <Field
+            label="Webhook 接收地址"
+            hint="把这个地址填到 Stripe Dashboard → Webhooks → Endpoint URL"
+            span={2}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="min-w-0 flex-1 break-all rounded border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">
+                {webhookUrl}
+              </code>
+              <Button variant="outline" onClick={copyWebhook} disabled={!form.uuid}>
+                <Copy className="size-4" />
+                复制
+              </Button>
+            </div>
           </Field>
-          <Field label="启用">
-            <Switch
-              checked={Boolean(form.enable)}
-              onCheckedChange={(c) => setForm((f) => ({ ...f, enable: c ? 1 : 0 }))}
-            />
-          </Field>
+        </CardContent>
+        <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-3">
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "保存中…" : "保存"}
+          </Button>
         </div>
-      </DataDrawer>
+      </Card>
     </div>
   );
 }
@@ -244,19 +207,24 @@ export function AdminPaymentPage() {
 function Field({
   label,
   required,
+  hint,
+  span,
   children
 }: {
   label: string;
   required?: boolean;
+  hint?: string;
+  span?: 1 | 2;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm">
+    <div className={`flex flex-col gap-1.5 ${span === 2 ? "md:col-span-2" : ""}`}>
+      <Label className="text-sm">
         {label}
         {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
-      </span>
+      </Label>
       {children}
+      {hint ? <span className="text-xs text-slate-400">{hint}</span> : null}
     </div>
   );
 }
