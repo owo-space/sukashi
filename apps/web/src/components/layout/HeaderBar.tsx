@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut, Settings, UserRound, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LogOut, Settings, User, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,23 +26,30 @@ export function HeaderBar({ title, settingsHref }: { title: string; settingsHref
   });
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-6">
-      <h1 className="text-base text-foreground">{title}</h1>
-      <div className="flex items-center gap-2">
+    <header className="flex h-14 items-center justify-between bg-white border-b border-slate-200 px-6">
+      <h1 className="text-[15px] text-slate-700">{title}</h1>
+      <div className="flex items-center gap-4">
         {settingsHref ? (
-          <Button asChild size="icon" variant="ghost">
-            <Link to={settingsHref}>
-              <Settings className="size-4" />
-            </Link>
-          </Button>
+          <Link
+            to={settingsHref}
+            className="text-slate-500 hover:text-slate-700"
+            aria-label="设置"
+          >
+            <Settings className="size-4" strokeWidth={1.75} />
+          </Link>
         ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="gap-1.5 text-sm">
-              <UserRound className="size-4" />
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-sm text-slate-700 hover:text-primary"
+            >
+              <span className="inline-flex size-5 items-center justify-center rounded-full bg-slate-200 text-slate-600">
+                <User className="size-3" strokeWidth={2} />
+              </span>
               <span>{data?.email ?? "—"}</span>
-              <ChevronDown className="size-3 opacity-60" />
-            </Button>
+              <ChevronDown className="size-3 text-slate-400" />
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             {isAdmin ? (

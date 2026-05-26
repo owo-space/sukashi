@@ -24,15 +24,15 @@ export function Sidebar({
   sections: SidebarSection[];
 }) {
   return (
-    <aside className="hidden md:flex md:w-[208px] md:flex-col md:bg-sidebar md:text-sidebar-foreground md:border-r md:border-sidebar-border">
-      <div className="flex h-14 items-center justify-center border-b border-sidebar-border bg-primary text-primary-foreground text-lg font-medium">
+    <aside className="hidden md:flex md:w-[208px] md:flex-col md:bg-white md:border-r md:border-slate-200">
+      <div className="flex h-14 items-center justify-center bg-primary text-primary-foreground text-xl font-medium tracking-wider">
         {title}
       </div>
       <nav className="flex-1 overflow-y-auto py-3">
         {sections.map((section, sectionIdx) => (
           <div key={`${section.label ?? "default"}-${sectionIdx}`} className="mb-2">
             {section.label ? (
-              <div className="px-4 pt-3 pb-1.5 text-xs text-sidebar-foreground/55">
+              <div className="px-4 pt-3 pb-1.5 text-xs text-slate-400">
                 {section.label}
               </div>
             ) : null}
@@ -46,14 +46,13 @@ export function Sidebar({
                       end={item.end}
                       className={({ isActive }) =>
                         cn(
-                          "flex items-center gap-2 px-4 py-2 text-sm transition-colors",
-                          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                          isActive &&
-                            "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          "flex items-center gap-2 px-4 py-2 text-[13px] transition-colors",
+                          "text-slate-700 hover:bg-slate-100",
+                          isActive && "bg-blue-50 text-primary"
                         )
                       }
                     >
-                      <Icon className="size-4" />
+                      <Icon className="size-4 shrink-0" strokeWidth={1.75} />
                       <span>{item.label}</span>
                     </NavLink>
                   </li>
@@ -64,7 +63,7 @@ export function Sidebar({
         ))}
       </nav>
       {version ? (
-        <div className="px-4 py-2 text-xs text-sidebar-foreground/45">{version}</div>
+        <div className="px-4 py-2 text-xs text-slate-400">{version}</div>
       ) : null}
     </aside>
   );

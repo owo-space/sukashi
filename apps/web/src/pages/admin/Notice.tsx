@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -15,17 +18,11 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
-import { FormDialog, type FieldDef } from "@/components/admin/FormDialog";
+import { RowActions } from "@/components/admin/RowActions";
+import { DataDrawer } from "@/components/admin/DataDrawer";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { formatUnixDate } from "@/lib/format";
 import type { NoticeItem } from "@/lib/types";
-
-const FIELDS: FieldDef[] = [
-  { key: "title", label: "标题", required: true, span: 2 },
-  { key: "img_url", label: "图片 URL", span: 2 },
-  { key: "content", label: "正文 (HTML)", type: "textarea", span: 2, required: true },
-  { key: "show", label: "对外显示", type: "switch", span: 2 }
-];
 
 export function AdminNoticePage() {
   const qc = useQueryClient();
@@ -34,11 +31,13 @@ export function AdminNoticePage() {
     queryFn: () => apiGet<NoticeItem[]>("/admin/notice/fetch")
   });
 
-  const [editing, setEditing] = useState<Partial<NoticeItem> | null>(null);
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [editing, setEditing] = useState<{ mode: "create" | "edit"; row?: NoticeItem } | null>(
+    null
+  );
+  const [form, setForm] = useState<Record<string, unknown>>({ show: 1 });
 
   const save = useMutation({
-    mutationFn: (input: Record<string, unknown>) => apiPost("/admin/notice/save", input),
+    mutationFn: () => apiPost("/admin/notice/save", form),
     onSuccess: () => {
       toast.success("已保存");
       setEditing(null);
@@ -46,12 +45,10 @@ export function AdminNoticePage() {
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
-
   const showToggle = useMutation({
     mutationFn: (n: NoticeItem) => apiPost("/admin/notice/show", { id: n.id, show: n.show ? 0 : 1 }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.notice.fetch"] })
   });
-
   const drop = useMutation({
     mutationFn: (id: number) => apiPost("/admin/notice/drop", { id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.notice.fetch"] })
@@ -59,15 +56,16 @@ export function AdminNoticePage() {
 
   return (
     <>
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-3">
-          <div>
+      <Card className="rounded">
+        <CardContent className="p-0">
+          <div className="px-4 py-3 border-b border-slate-100">
             <Button
               size="sm"
               variant="outline"
+              className="h-9 gap-1"
               onClick={() => {
-                setEditing({});
-                setValues({ show: 1 });
+                setForm({ show: 1 });
+                setEditing({ mode: "create" });
               }}
             >
               <Plus className="size-4" />
@@ -76,12 +74,12 @@ export function AdminNoticePage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>显示</TableHead>
-                <TableHead>标题</TableHead>
-                <TableHead>更新时间</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+              <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                <TableHead className="text-slate-500">ID</TableHead>
+                <TableHead className="text-slate-500">显示</TableHead>
+                <TableHead className="text-slate-500">标题</TableHead>
+                <TableHead className="text-slate-500">更新时间</TableHead>
+                <TableHead className="text-right text-slate-500">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -99,42 +97,44 @@ export function AdminNoticePage() {
                 </TableRow>
               ) : (
                 data.map((n) => (
-                  <TableRow key={n.id}>
-                    <TableCell>{n.id}</TableCell>
+                  <TableRow key={n.id} className="border-b border-slate-100">
+                    <TableCell className="text-slate-600">{n.id}</TableCell>
                     <TableCell>
-                      <Switch checked={Boolean(n.show)} onCheckedChange={() => showToggle.mutate(n)} />
+                      <Switch
+                        checked={Boolean(n.show)}
+                        onCheckedChange={() => showToggle.mutate(n)}
+                      />
                     </TableCell>
-                    <TableCell className="font-medium">{n.title}</TableCell>
-                    <TableCell className="text-muted-foreground">{formatUnixDate(n.updated_at)}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(n);
-                          setValues({
-                            id: n.id,
-                            title: n.title,
-                            content: n.content,
-                            img_url: n.img_url ?? "",
-                            show: n.show ? 1 : 0
-                          });
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                        编辑
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`删除公告 "${n.title}"？`)) drop.mutate(n.id);
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                        删除
-                      </Button>
+                    <TableCell>{n.title}</TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      {formatUnixDate(n.updated_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <RowActions>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setForm({
+                              id: n.id,
+                              title: n.title,
+                              content: n.content,
+                              img_url: n.img_url ?? "",
+                              show: n.show ? 1 : 0
+                            });
+                            setEditing({ mode: "edit", row: n });
+                          }}
+                        >
+                          编辑
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm(`删除公告 "${n.title}"？`)) drop.mutate(n.id);
+                          }}
+                        >
+                          删除
+                        </DropdownMenuItem>
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))
@@ -144,17 +144,62 @@ export function AdminNoticePage() {
         </CardContent>
       </Card>
 
-      <FormDialog
+      <DataDrawer
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
-        title={editing && "id" in editing ? "编辑公告" : "添加公告"}
-        fields={FIELDS}
-        values={values}
-        onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
-        onSubmit={() => save.mutate(values)}
+        title={editing?.mode === "edit" ? "编辑公告" : "新建公告"}
+        width={560}
         submitting={save.isPending}
-        size="lg"
-      />
+        onSubmit={() => save.mutate()}
+      >
+        <div className="flex flex-col gap-3">
+          <Field label="标题" required>
+            <Input
+              value={String(form.title ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            />
+          </Field>
+          <Field label="图片 URL">
+            <Input
+              value={String(form.img_url ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, img_url: e.target.value }))}
+            />
+          </Field>
+          <Field label="正文 (HTML)" required>
+            <Textarea
+              rows={10}
+              value={String(form.content ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+            />
+          </Field>
+          <Field label="对外显示">
+            <Switch
+              checked={Boolean(form.show)}
+              onCheckedChange={(c) => setForm((f) => ({ ...f, show: c ? 1 : 0 }))}
+            />
+          </Field>
+        </div>
+      </DataDrawer>
     </>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm">
+        {label}
+        {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
+      </span>
+      {children}
+    </div>
   );
 }

@@ -1,11 +1,20 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -15,7 +24,8 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
-import { FormDialog, type FieldDef } from "@/components/admin/FormDialog";
+import { RowActions } from "@/components/admin/RowActions";
+import { DataDrawer } from "@/components/admin/DataDrawer";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 
 interface ServerRoute {
@@ -26,31 +36,6 @@ interface ServerRoute {
   action_value?: string | null;
 }
 
-const FIELDS: FieldDef[] = [
-  { key: "remarks", label: "备注", required: true, span: 2 },
-  {
-    key: "match",
-    label: "匹配规则 (一行一条)",
-    type: "textarea",
-    required: true,
-    span: 2,
-    placeholder: "geosite:google\ngeosite:netflix\n*.example.com",
-    hint: "支持 geosite:xxx / geoip:xxx / 通配符"
-  },
-  {
-    key: "action",
-    label: "动作",
-    type: "select",
-    required: true,
-    options: [
-      { value: "block", label: "block (拒绝)" },
-      { value: "dns", label: "dns (DNS)" },
-      { value: "direct", label: "direct (直连)" }
-    ]
-  },
-  { key: "action_value", label: "动作值 (可选)", placeholder: "remark" }
-];
-
 export function AdminServerRoutePage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
@@ -58,18 +43,29 @@ export function AdminServerRoutePage() {
     queryFn: () => apiGet<ServerRoute[]>("/admin/server/route/fetch")
   });
 
-  const [editing, setEditing] = useState<Partial<ServerRoute> | null>(null);
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [editing, setEditing] = useState<{ mode: "create" | "edit"; row?: ServerRoute } | null>(
+    null
+  );
+  const [form, setForm] = useState<{
+    id?: number;
+    remarks: string;
+    match: string;
+    action: string;
+    action_value: string;
+  }>({ remarks: "", match: "", action: "block", action_value: "" });
 
   const save = useMutation({
-    mutationFn: (input: Record<string, unknown>) => {
-      const payload: Record<string, unknown> = { ...input };
-      if (typeof payload.match === "string") {
-        payload.match = (payload.match as string)
+    mutationFn: (input: typeof form) => {
+      const payload: Record<string, unknown> = {
+        remarks: input.remarks,
+        match: input.match
           .split(/\n+/)
           .map((s) => s.trim())
-          .filter(Boolean);
-      }
+          .filter(Boolean),
+        action: input.action,
+        action_value: input.action_value || null
+      };
+      if (input.id) payload.id = input.id;
       return apiPost("/admin/server/route/save", payload);
     },
     onSuccess: () => {
@@ -79,7 +75,6 @@ export function AdminServerRoutePage() {
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
-
   const drop = useMutation({
     mutationFn: (id: number) => apiPost("/admin/server/route/drop", { id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.server.route.fetch"] })
@@ -87,15 +82,16 @@ export function AdminServerRoutePage() {
 
   return (
     <>
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-3">
-          <div>
+      <Card className="rounded">
+        <CardContent className="p-0">
+          <div className="px-4 py-3 border-b border-slate-100">
             <Button
               size="sm"
               variant="outline"
+              className="h-9 gap-1"
               onClick={() => {
-                setEditing({});
-                setValues({ action: "block" });
+                setEditing({ mode: "create" });
+                setForm({ remarks: "", match: "", action: "block", action_value: "" });
               }}
             >
               <Plus className="size-4" />
@@ -104,12 +100,12 @@ export function AdminServerRoutePage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>备注</TableHead>
-                <TableHead>匹配</TableHead>
-                <TableHead>动作</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+              <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                <TableHead className="text-slate-500">ID</TableHead>
+                <TableHead className="text-slate-500">备注</TableHead>
+                <TableHead className="text-slate-500">动作</TableHead>
+                <TableHead className="text-slate-500">匹配条目</TableHead>
+                <TableHead className="text-right text-slate-500">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -129,52 +125,44 @@ export function AdminServerRoutePage() {
                 data.map((r) => {
                   const matches = Array.isArray(r.match) ? r.match : [];
                   return (
-                    <TableRow key={r.id}>
-                      <TableCell>{r.id}</TableCell>
+                    <TableRow key={r.id} className="border-b border-slate-100">
+                      <TableCell className="text-slate-600">{r.id}</TableCell>
                       <TableCell>{r.remarks}</TableCell>
-                      <TableCell className="text-xs">
-                        {matches.slice(0, 4).map((m) => (
-                          <Badge key={m} variant="secondary" className="mr-1">
-                            {m}
-                          </Badge>
-                        ))}
-                        {matches.length > 4 ? (
-                          <span className="text-muted-foreground">+{matches.length - 4}</span>
-                        ) : null}
-                      </TableCell>
                       <TableCell>
-                        {r.action}
-                        {r.action_value ? ` → ${r.action_value}` : ""}
+                        <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                          {r.action}
+                          {r.action_value ? ` → ${r.action_value}` : ""}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-right space-x-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditing(r);
-                            setValues({
-                              id: r.id,
-                              remarks: r.remarks,
-                              match: matches.join("\n"),
-                              action: r.action,
-                              action_value: r.action_value ?? ""
-                            });
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                          编辑
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm(`删除路由 "${r.remarks}"？`)) drop.mutate(r.id);
-                          }}
-                        >
-                          <Trash2 className="size-4" />
-                          删除
-                        </Button>
+                      <TableCell className="text-xs text-slate-500">
+                        {matches.length} 条
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <RowActions>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditing({ mode: "edit", row: r });
+                              setForm({
+                                id: r.id,
+                                remarks: r.remarks,
+                                match: matches.join("\n"),
+                                action: r.action,
+                                action_value: r.action_value ?? ""
+                              });
+                            }}
+                          >
+                            编辑
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm(`删除路由 "${r.remarks}"？`)) drop.mutate(r.id);
+                            }}
+                          >
+                            删除
+                          </DropdownMenuItem>
+                        </RowActions>
                       </TableCell>
                     </TableRow>
                   );
@@ -185,17 +173,66 @@ export function AdminServerRoutePage() {
         </CardContent>
       </Card>
 
-      <FormDialog
+      <DataDrawer
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
-        title={editing && "id" in editing ? "编辑路由" : "添加路由"}
-        fields={FIELDS}
-        values={values}
-        onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
-        onSubmit={() => save.mutate(values)}
+        title={editing?.mode === "edit" ? "编辑路由" : "新建路由"}
         submitting={save.isPending}
-        size="lg"
-      />
+        onSubmit={() => save.mutate(form)}
+      >
+        <div className="flex flex-col gap-3">
+          <Field label="备注" required>
+            <Input value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} />
+          </Field>
+          <Field label="动作" required>
+            <Select value={form.action} onValueChange={(v) => setForm({ ...form, action: v })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="block">block (拒绝)</SelectItem>
+                <SelectItem value="dns">dns (DNS 解析)</SelectItem>
+                <SelectItem value="direct">direct (直连)</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="动作值 (可选)">
+            <Input
+              value={form.action_value}
+              onChange={(e) => setForm({ ...form, action_value: e.target.value })}
+              placeholder="可选,例如 8.8.8.8"
+            />
+          </Field>
+          <Field label="匹配规则 (一行一条)" required>
+            <Textarea
+              rows={8}
+              value={form.match}
+              onChange={(e) => setForm({ ...form, match: e.target.value })}
+              placeholder={"geosite:google\ngeosite:netflix\n*.example.com"}
+            />
+          </Field>
+        </div>
+      </DataDrawer>
     </>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm">
+        {label}
+        {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
+      </span>
+      {children}
+    </div>
   );
 }

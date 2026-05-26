@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, Users } from "lucide-react";
+import { GripVertical, HelpCircle, Plus, User } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -14,15 +15,25 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/EmptyState";
-import { FormDialog, type FieldDef } from "@/components/admin/FormDialog";
+import { DataDrawer } from "@/components/admin/DataDrawer";
+import { RowActions } from "@/components/admin/RowActions";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { formatCny } from "@/lib/format";
 import type { Plan } from "@/lib/types";
 
 interface AdminPlan extends Plan {
   count?: number;
-  group_id?: number | null;
   group?: { id: number; name: string } | null;
 }
 
@@ -31,15 +42,57 @@ interface ServerGroup {
   name: string;
 }
 
-const PERIOD_KEYS = [
-  "month_price",
-  "quarter_price",
-  "half_year_price",
-  "year_price",
-  "two_year_price",
-  "three_year_price",
-  "onetime_price"
-] as const;
+const PRICE_COLS: Array<[keyof Plan, string]> = [
+  ["month_price", "月付"],
+  ["quarter_price", "季付"],
+  ["half_year_price", "半年付"],
+  ["year_price", "年付"],
+  ["two_year_price", "两年付"],
+  ["three_year_price", "三年付"],
+  ["onetime_price", "一次性"]
+];
+
+function Help({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="size-3 text-slate-400" strokeWidth={1.75} />
+        </TooltipTrigger>
+        <TooltipContent>{children}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{title}</h3>
+      <div className="flex flex-col gap-3">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  required,
+  children
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label className="text-sm">
+        {label}
+        {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
+      </Label>
+      {children}
+    </div>
+  );
+}
 
 export function AdminPlanPage() {
   const qc = useQueryClient();
@@ -52,20 +105,21 @@ export function AdminPlanPage() {
     queryFn: () => apiGet<ServerGroup[]>("/admin/server/group/fetch")
   });
 
-  const [editing, setEditing] = useState<Partial<AdminPlan> | null>(null);
-  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [editing, setEditing] = useState<{ mode: "create" | "edit"; row?: AdminPlan } | null>(null);
+  const [form, setForm] = useState<Record<string, unknown>>({});
+  const [forceUpdate, setForceUpdate] = useState(false);
 
-  const toggleShow = useMutation({
-    mutationFn: (p: AdminPlan) => apiPost("/admin/plan/update", { id: p.id, show: p.show ? 0 : 1 }),
+  const toggle = useMutation({
+    mutationFn: (input: { id: number; [k: string]: unknown }) =>
+      apiPost("/admin/plan/update", input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.plan.fetch"] }),
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
-  const toggleRenew = useMutation({
-    mutationFn: (p: AdminPlan) => apiPost("/admin/plan/update", { id: p.id, renew: p.renew ? 0 : 1 }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.plan.fetch"] })
-  });
   const save = useMutation({
-    mutationFn: (input: Record<string, unknown>) => apiPost("/admin/plan/save", input),
+    mutationFn: (input: Record<string, unknown>) => {
+      const payload: Record<string, unknown> = { ...input, force_update: forceUpdate ? 1 : 0 };
+      return apiPost("/admin/plan/save", payload);
+    },
     onSuccess: () => {
       toast.success("已保存");
       setEditing(null);
@@ -78,67 +132,68 @@ export function AdminPlanPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.plan.fetch"] })
   });
 
-  const fields: FieldDef[] = [
-    { key: "name", label: "名称", required: true },
-    {
-      key: "group_id",
-      label: "权限组",
-      type: "select",
-      options: (groups.data ?? []).map((g) => ({ value: String(g.id), label: g.name })),
-      required: true
-    },
-    { key: "transfer_enable", label: "流量 (GB)", type: "number", required: true },
-    { key: "device_limit", label: "设备限制", type: "number" },
-    { key: "speed_limit", label: "限速 (Mbps)", type: "number" },
-    { key: "capacity_limit", label: "容量上限 (人)", type: "number" },
-    { key: "month_price", label: "月付 (CNY)", type: "number" },
-    { key: "quarter_price", label: "季付", type: "number" },
-    { key: "half_year_price", label: "半年付", type: "number" },
-    { key: "year_price", label: "年付", type: "number" },
-    { key: "two_year_price", label: "两年付", type: "number" },
-    { key: "three_year_price", label: "三年付", type: "number" },
-    { key: "onetime_price", label: "一次性", type: "number" },
-    { key: "reset_price", label: "流量重置价格", type: "number" },
-    { key: "reset_traffic_method", label: "流量重置方法 (0/1/2)", type: "number" },
-    { key: "show", label: "对外显示", type: "switch" },
-    { key: "renew", label: "允许续费", type: "switch" },
-    { key: "content", label: "套餐内容(描述)", type: "textarea", span: 2 }
-  ];
+  function openCreate() {
+    setEditing({ mode: "create" });
+    setForm({ show: 1, renew: 1, transfer_enable: 100 });
+    setForceUpdate(false);
+  }
+  function openEdit(p: AdminPlan) {
+    setEditing({ mode: "edit", row: p });
+    setForm({
+      id: p.id,
+      name: p.name,
+      content: p.content ?? "",
+      group_id: p.group_id ? String(p.group_id) : "",
+      transfer_enable: p.transfer_enable,
+      device_limit: p.device_limit ?? "",
+      speed_limit: p.speed_limit ?? "",
+      capacity_limit: p.capacity_limit ?? "",
+      month_price: p.month_price ?? "",
+      quarter_price: p.quarter_price ?? "",
+      half_year_price: p.half_year_price ?? "",
+      year_price: p.year_price ?? "",
+      two_year_price: p.two_year_price ?? "",
+      three_year_price: p.three_year_price ?? "",
+      onetime_price: p.onetime_price ?? "",
+      reset_price: p.reset_price ?? "",
+      reset_traffic_method: p.reset_traffic_method ?? "",
+      show: p.show ? 1 : 0,
+      renew: p.renew ? 1 : 0
+    });
+    setForceUpdate(false);
+  }
 
   return (
     <>
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-3">
-          <div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setEditing({});
-                setValues({ show: 1, renew: 1, transfer_enable: 100 });
-              }}
-            >
+      <Card className="rounded">
+        <CardContent className="p-0">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <Button size="sm" variant="outline" className="h-9 gap-1" onClick={openCreate}>
               <Plus className="size-4" />
               添加订阅
             </Button>
           </div>
+
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>销售状态</TableHead>
-                <TableHead>续费</TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>统计</TableHead>
-                <TableHead>流量</TableHead>
-                <TableHead>设备</TableHead>
-                <TableHead>月付</TableHead>
-                <TableHead>季付</TableHead>
-                <TableHead>半年付</TableHead>
-                <TableHead>年付</TableHead>
-                <TableHead>两年付</TableHead>
-                <TableHead>三年付</TableHead>
-                <TableHead>一次性</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+              <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                <TableHead className="w-12 text-slate-500">排序</TableHead>
+                <TableHead className="text-slate-500">销售状态</TableHead>
+                <TableHead className="text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    续费 <Help>关闭后,订阅到期不可续费</Help>
+                  </span>
+                </TableHead>
+                <TableHead className="text-slate-500">名称</TableHead>
+                <TableHead className="text-slate-500">统计</TableHead>
+                <TableHead className="text-slate-500">流量</TableHead>
+                <TableHead className="text-slate-500">设备数限制</TableHead>
+                {PRICE_COLS.map(([key, label]) => (
+                  <TableHead key={key as string} className="text-slate-500">
+                    {label}
+                  </TableHead>
+                ))}
+                <TableHead className="text-right text-slate-500">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -156,69 +211,54 @@ export function AdminPlanPage() {
                 </TableRow>
               ) : (
                 data.map((p) => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className="border-b border-slate-100">
                     <TableCell>
-                      <Switch checked={Boolean(p.show)} onCheckedChange={() => toggleShow.mutate(p)} />
+                      <GripVertical className="size-4 text-slate-400 cursor-move" />
                     </TableCell>
                     <TableCell>
-                      <Switch checked={Boolean(p.renew)} onCheckedChange={() => toggleRenew.mutate(p)} />
+                      <Switch
+                        checked={Boolean(p.show)}
+                        onCheckedChange={() => toggle.mutate({ id: p.id, show: p.show ? 0 : 1 })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={Boolean(p.renew)}
+                        onCheckedChange={() =>
+                          toggle.mutate({ id: p.id, renew: p.renew ? 0 : 1 })
+                        }
+                      />
                     </TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1 text-sm">
-                        <Users className="size-3" />
+                      <span className="inline-flex items-center gap-1 text-slate-600">
+                        <User className="size-3" strokeWidth={1.75} />
                         {p.count ?? 0}
                       </span>
                     </TableCell>
-                    <TableCell>{p.transfer_enable} GB</TableCell>
-                    <TableCell>{p.device_limit ?? "—"}</TableCell>
-                    {PERIOD_KEYS.map((k) => {
-                      const v = p[k] as number | null | undefined;
-                      return <TableCell key={k}>{v && v > 0 ? formatCny(v) : "—"}</TableCell>;
+                    <TableCell className="text-slate-600">{p.transfer_enable} GB</TableCell>
+                    <TableCell className="text-slate-600">{p.device_limit ?? "-"}</TableCell>
+                    {PRICE_COLS.map(([key]) => {
+                      const v = p[key] as number | null | undefined;
+                      return (
+                        <TableCell key={key as string} className="text-slate-600">
+                          {v && v > 0 ? formatCny(v) : "-"}
+                        </TableCell>
+                      );
                     })}
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(p);
-                          setValues({
-                            id: p.id,
-                            name: p.name,
-                            group_id: p.group_id ? String(p.group_id) : "",
-                            transfer_enable: p.transfer_enable,
-                            device_limit: p.device_limit ?? "",
-                            speed_limit: p.speed_limit ?? "",
-                            capacity_limit: p.capacity_limit ?? "",
-                            month_price: p.month_price ?? "",
-                            quarter_price: p.quarter_price ?? "",
-                            half_year_price: p.half_year_price ?? "",
-                            year_price: p.year_price ?? "",
-                            two_year_price: p.two_year_price ?? "",
-                            three_year_price: p.three_year_price ?? "",
-                            onetime_price: p.onetime_price ?? "",
-                            reset_price: p.reset_price ?? "",
-                            reset_traffic_method: p.reset_traffic_method ?? "",
-                            show: p.show ? 1 : 0,
-                            renew: p.renew ? 1 : 0,
-                            content: p.content ?? ""
-                          });
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                        编辑
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`删除订阅 "${p.name}"？`)) drop.mutate(p.id);
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                        删除
-                      </Button>
+                    <TableCell className="text-right">
+                      <RowActions>
+                        <DropdownMenuItem onClick={() => openEdit(p)}>编辑</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm(`删除订阅 "${p.name}"？`)) drop.mutate(p.id);
+                          }}
+                        >
+                          删除
+                        </DropdownMenuItem>
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))
@@ -228,17 +268,136 @@ export function AdminPlanPage() {
         </CardContent>
       </Card>
 
-      <FormDialog
+      <DataDrawer
         open={editing !== null}
         onOpenChange={(o) => !o && setEditing(null)}
-        title={editing && "id" in editing ? "编辑订阅" : "添加订阅"}
-        fields={fields}
-        values={values}
-        onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
-        onSubmit={() => save.mutate(values)}
+        title={editing?.mode === "edit" ? "编辑订阅" : "新建订阅"}
+        width={560}
         submitting={save.isPending}
-        size="lg"
-      />
+        onSubmit={() => save.mutate(form)}
+        extraLeft={
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <Checkbox
+              checked={forceUpdate}
+              onCheckedChange={(c) => setForceUpdate(Boolean(c))}
+            />
+            强制更新到用户
+          </label>
+        }
+      >
+        <div className="flex flex-col gap-4 pb-6">
+          <Field label="套餐名称" required>
+            <Input
+              value={String(form.name ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              placeholder="请输入套餐名称"
+            />
+          </Field>
+          <Field label="套餐描述">
+            <Textarea
+              rows={3}
+              value={String(form.content ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+              placeholder="请输入套餐描述,支持HTML"
+            />
+          </Field>
+          <Section title="售价设置">
+            <div className="grid grid-cols-3 gap-3">
+              {PRICE_COLS.slice(0, 6).map(([key, label]) => (
+                <Field key={key as string} label={label}>
+                  <Input
+                    type="number"
+                    value={String(form[key as string] ?? "")}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, [key]: e.target.value === "" ? "" : Number(e.target.value) }))
+                    }
+                  />
+                </Field>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="一次性">
+                <Input
+                  type="number"
+                  value={String(form.onetime_price ?? "")}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      onetime_price: e.target.value === "" ? "" : Number(e.target.value)
+                    }))
+                  }
+                />
+              </Field>
+              <Field label="重置包">
+                <Input
+                  type="number"
+                  value={String(form.reset_price ?? "")}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      reset_price: e.target.value === "" ? "" : Number(e.target.value)
+                    }))
+                  }
+                />
+              </Field>
+            </div>
+          </Section>
+          <Field label="套餐流量 (GB)" required>
+            <Input
+              type="number"
+              value={String(form.transfer_enable ?? "")}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, transfer_enable: Number(e.target.value) }))
+              }
+            />
+          </Field>
+          <Field label="设备数限制 (留空不限)">
+            <Input
+              type="number"
+              value={String(form.device_limit ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, device_limit: e.target.value }))}
+              placeholder="留空则不限制"
+            />
+          </Field>
+          <Field label="权限组" required>
+            <select
+              className="h-9 rounded border border-input bg-background px-2 text-sm"
+              value={String(form.group_id ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, group_id: e.target.value }))}
+            >
+              <option value="">请选择权限组</option>
+              {(groups.data ?? []).map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="流量重置方式 (0 = 月初, 1 = 购买日, 2 = 不重置)">
+            <Input
+              type="number"
+              value={String(form.reset_traffic_method ?? "")}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, reset_traffic_method: e.target.value }))
+              }
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="对外显示">
+              <Switch
+                checked={Boolean(form.show)}
+                onCheckedChange={(c) => setForm((f) => ({ ...f, show: c ? 1 : 0 }))}
+              />
+            </Field>
+            <Field label="允许续费">
+              <Switch
+                checked={Boolean(form.renew)}
+                onCheckedChange={(c) => setForm((f) => ({ ...f, renew: c ? 1 : 0 }))}
+              />
+            </Field>
+          </div>
+        </div>
+      </DataDrawer>
     </>
   );
 }

@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, Copy } from "lucide-react";
+import { HelpCircle, User, ArrowDownUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -15,48 +19,49 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/EmptyState";
-import { FormDialog, type FieldDef } from "@/components/admin/FormDialog";
 import { NodeStatusDot } from "@/components/admin/NodeStatusDot";
+import { ProtocolChip } from "@/components/admin/ProtocolChip";
+import { ProtocolMenu } from "@/components/admin/ProtocolMenu";
+import { RowActions } from "@/components/admin/RowActions";
+import { DataDrawer } from "@/components/admin/DataDrawer";
+import { ServerNodeForm } from "@/pages/admin/ServerNodeForm";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
-
-type Protocol =
-  | "shadowsocks"
-  | "vless"
-  | "vmess"
-  | "trojan"
-  | "hysteria2"
-  | "tuic"
-  | "anytls"
-  | "mieru"
-  | "snell";
+import { PROTOCOLS, type Protocol } from "@/components/admin/protocols";
 
 interface AdminServer {
   id: number;
   type: string;
   name: string;
-  parentId?: number | null;
-  rate: string | number;
-  tags?: string[] | string | null;
-  group_id?: number[] | string | null;
-  is_online?: boolean | number;
-  available_status?: number | null;
-  show?: boolean | number;
-  host?: string;
-  port?: string | number;
-  serverPort?: number;
+  protocol: Protocol;
+  host: string;
+  port: string | number;
   server_port?: number;
+  serverPort?: number;
+  rate: string;
+  show: number | boolean;
+  available_status?: number | null;
+  is_online?: number | boolean;
   online?: number;
-  protocol?: Protocol;
+  group_id?: number[] | string | null;
+  route_id?: number[] | string | null;
+  tags?: string[];
+  sort?: number | null;
+  // protocol-specific fields raw
   cipher?: string | null;
   server_key?: string | null;
-  network?: string;
-  network_settings?: unknown;
   tls?: number;
   tls_settings?: unknown;
   flow?: string | null;
+  network?: string;
+  network_settings?: unknown;
   encryption?: string | null;
-  encryption_settings?: unknown;
   up_mbps?: number;
   down_mbps?: number;
   obfs?: string | null;
@@ -67,208 +72,57 @@ interface AdminServer {
   disable_sni?: boolean | number;
   padding_scheme?: unknown;
   mieru_settings?: unknown;
-  sort?: number | null;
 }
-
-const PROTOCOL_OPTIONS: Array<{ value: Protocol; label: string }> = [
-  { value: "shadowsocks", label: "Shadowsocks" },
-  { value: "vless", label: "VLESS" },
-  { value: "vmess", label: "VMess" },
-  { value: "trojan", label: "Trojan" },
-  { value: "hysteria2", label: "Hysteria2" },
-  { value: "tuic", label: "TUIC" },
-  { value: "anytls", label: "AnyTLS" },
-  { value: "mieru", label: "Mieru" },
-  { value: "snell", label: "Snell" }
-];
-
-const PROTOCOL_LABEL: Record<string, string> = Object.fromEntries(
-  PROTOCOL_OPTIONS.map((o) => [o.value, o.label])
-);
-
-const NETWORK_OPTIONS = [
-  { value: "tcp", label: "TCP" },
-  { value: "ws", label: "WebSocket" },
-  { value: "grpc", label: "gRPC" },
-  { value: "h2", label: "HTTP/2" },
-  { value: "http", label: "HTTP" }
-];
-const TLS_OPTIONS = [
-  { value: "0", label: "无 TLS" },
-  { value: "1", label: "TLS" },
-  { value: "2", label: "Reality" }
-];
 
 interface ServerGroup {
   id: number;
   name: string;
 }
 
-const COMMON_PREFIX: FieldDef[] = [
-  { key: "name", label: "节点名称", required: true },
-  { key: "protocol", label: "协议", type: "select", required: true, options: PROTOCOL_OPTIONS },
-  { key: "host", label: "地址 (Host)", required: true, placeholder: "1.2.3.4 / hostname" },
-  { key: "port", label: "公网端口", required: true, placeholder: "443" },
-  { key: "server_port", label: "内部端口", type: "number", required: true, placeholder: "443" },
-  { key: "rate", label: "倍率", required: true, placeholder: "1" },
-  { key: "sort", label: "排序", type: "number" }
-];
+interface ServerRoute {
+  id: number;
+  remarks: string;
+}
 
-const COMMON_SUFFIX: FieldDef[] = [
-  { key: "show", label: "对外显示", type: "switch", span: 2 }
-];
-
-const PROTOCOL_FIELDS: Record<Protocol, FieldDef[]> = {
-  shadowsocks: [
-    {
-      key: "cipher",
-      label: "加密方式",
-      type: "select",
-      options: [
-        { value: "aes-128-gcm", label: "aes-128-gcm" },
-        { value: "aes-256-gcm", label: "aes-256-gcm" },
-        { value: "chacha20-ietf-poly1305", label: "chacha20-ietf-poly1305" },
-        { value: "2022-blake3-aes-128-gcm", label: "2022-blake3-aes-128-gcm" },
-        { value: "2022-blake3-aes-256-gcm", label: "2022-blake3-aes-256-gcm" },
-        { value: "2022-blake3-chacha20-poly1305", label: "2022-blake3-chacha20-poly1305" }
-      ]
-    },
-    { key: "server_key", label: "密码 / Server Key", required: true },
-    {
-      key: "obfs",
-      label: "Obfs",
-      type: "select",
-      options: [
-        { value: "", label: "无" },
-        { value: "http", label: "http" },
-        { value: "tls", label: "tls" }
-      ]
-    }
-  ],
-  vless: [
-    { key: "tls", label: "TLS", type: "select", options: TLS_OPTIONS },
-    { key: "flow", label: "Flow", placeholder: "xtls-rprx-vision (留空=无)" },
-    { key: "network", label: "传输协议", type: "select", options: NETWORK_OPTIONS },
-    {
-      key: "network_settings",
-      label: "传输协议设置 (JSON)",
-      type: "textarea",
-      span: 2,
-      placeholder: '{"path":"/ws","host":"example.com"}'
-    },
-    { key: "tls_settings", label: "TLS 设置 (JSON)", type: "textarea", span: 2 },
-    { key: "encryption", label: "加密 (Reality / xtls)" }
-  ],
-  vmess: [
-    { key: "tls", label: "TLS", type: "select", options: TLS_OPTIONS.slice(0, 2) },
-    { key: "network", label: "传输协议", type: "select", options: NETWORK_OPTIONS },
-    { key: "network_settings", label: "传输协议设置 (JSON)", type: "textarea", span: 2 },
-    { key: "tls_settings", label: "TLS 设置 (JSON)", type: "textarea", span: 2 }
-  ],
-  trojan: [
-    { key: "server_key", label: "密码", required: true },
-    { key: "tls", label: "TLS", type: "select", options: TLS_OPTIONS.slice(0, 2) },
-    { key: "network", label: "传输协议", type: "select", options: NETWORK_OPTIONS },
-    { key: "network_settings", label: "传输协议设置 (JSON)", type: "textarea", span: 2 },
-    { key: "tls_settings", label: "TLS 设置 (JSON)", type: "textarea", span: 2 }
-  ],
-  hysteria2: [
-    { key: "server_key", label: "认证密码 (auth_str)", required: true },
-    { key: "up_mbps", label: "上行 Mbps", type: "number" },
-    { key: "down_mbps", label: "下行 Mbps", type: "number" },
-    {
-      key: "obfs",
-      label: "Obfs",
-      type: "select",
-      options: [
-        { value: "", label: "无" },
-        { value: "salamander", label: "salamander" }
-      ]
-    },
-    { key: "obfs_password", label: "Obfs 密码" }
-  ],
-  tuic: [
-    { key: "server_key", label: "UUID:Password", required: true, placeholder: "uuid:password" },
-    {
-      key: "udp_relay_mode",
-      label: "UDP 中继",
-      type: "select",
-      options: [
-        { value: "native", label: "native" },
-        { value: "quic", label: "quic" }
-      ]
-    },
-    {
-      key: "congestion_control",
-      label: "拥塞控制",
-      type: "select",
-      options: [
-        { value: "bbr", label: "bbr" },
-        { value: "cubic", label: "cubic" },
-        { value: "new_reno", label: "new_reno" }
-      ]
-    },
-    { key: "zero_rtt_handshake", label: "0-RTT 握手", type: "switch" },
-    { key: "disable_sni", label: "禁用 SNI", type: "switch" }
-  ],
-  anytls: [
-    { key: "server_key", label: "密码", required: true },
-    {
-      key: "padding_scheme",
-      label: "Padding Scheme (JSON, 留空使用默认)",
-      type: "textarea",
-      span: 2
-    }
-  ],
-  mieru: [
-    { key: "server_key", label: "用户密码", required: true },
-    {
-      key: "network",
-      label: "传输协议",
-      type: "select",
-      options: [
-        { value: "tcp", label: "TCP" },
-        { value: "udp", label: "UDP" },
-        { value: "mixed", label: "TCP + UDP" }
-      ]
-    },
-    {
-      key: "mieru_settings",
-      label: "Mieru Settings (JSON, 留空使用默认)",
-      type: "textarea",
-      span: 2,
-      placeholder:
-        '{"mtu":0,"port_bindings":[{"port":443,"protocol":"TCP"}],"traffic_pattern":null,"user_hint_is_mandatory":false}'
-    }
-  ],
-  snell: [
-    { key: "server_key", label: "PSK", required: true },
-    {
-      key: "obfs",
-      label: "Obfs",
-      type: "select",
-      options: [
-        { value: "", label: "无" },
-        { value: "http", label: "http" },
-        { value: "tls", label: "tls" }
-      ]
-    },
-    { key: "obfs_password", label: "Obfs Host" }
-  ]
-};
-
-function fieldsFor(protocol: Protocol, groupHint: string): FieldDef[] {
-  return [
-    ...COMMON_PREFIX,
-    {
-      key: "group_id",
-      label: "权限组 ID (逗号分隔)",
-      placeholder: groupHint,
-      hint: "可填多个权限组,逗号分隔"
-    },
-    ...PROTOCOL_FIELDS[protocol],
-    ...COMMON_SUFFIX
-  ];
+function PaginationFooter({
+  count,
+  page,
+  pageSize,
+  onChange
+}: {
+  count: number;
+  page: number;
+  pageSize: number;
+  onChange: (p: number) => void;
+}) {
+  if (count <= pageSize) return null;
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
+  return (
+    <div className="flex justify-end gap-1 px-4 py-3 text-xs">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="size-7 p-0"
+        disabled={page === 1}
+        onClick={() => onChange(page - 1)}
+      >
+        ‹
+      </Button>
+      <span className="inline-flex size-7 items-center justify-center rounded border border-primary bg-white text-primary">
+        {page}
+      </span>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="size-7 p-0"
+        disabled={page >= totalPages}
+        onClick={() => onChange(page + 1)}
+      >
+        ›
+      </Button>
+      <span className="ml-2 inline-flex items-center text-slate-500">10 条/页</span>
+    </div>
+  );
 }
 
 export function AdminServerPage() {
@@ -282,223 +136,271 @@ export function AdminServerPage() {
     queryKey: ["admin.server.group.fetch"],
     queryFn: () => apiGet<ServerGroup[]>("/admin/server/group/fetch")
   });
-  const groupHint = useMemo(
-    () => (groups.data ?? []).map((g) => `${g.id}=${g.name}`).join(", "),
-    [groups.data]
-  );
+  const routes = useQuery({
+    queryKey: ["admin.server.route.fetch"],
+    queryFn: () => apiGet<ServerRoute[]>("/admin/server/route/fetch")
+  });
 
-  const [editing, setEditing] = useState<Partial<AdminServer> | null>(null);
-  const [values, setValues] = useState<Record<string, unknown>>({});
-  const currentProtocol = (values.protocol as Protocol) ?? "shadowsocks";
-  const fields = useMemo(() => fieldsFor(currentProtocol, groupHint), [currentProtocol, groupHint]);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE = 10;
 
-  function openCreate() {
-    setEditing({});
-    setValues({
-      protocol: "shadowsocks",
-      show: 1,
-      rate: "1",
-      port: "443",
-      server_port: 443,
-      network: "tcp",
-      tls: "0"
-    });
-  }
-  function openEdit(s: AdminServer) {
-    setEditing(s);
-    setValues({
-      id: s.id,
-      name: s.name,
-      protocol: s.protocol ?? "shadowsocks",
-      host: s.host,
-      port: s.port,
-      server_port: s.server_port ?? s.serverPort,
-      rate: typeof s.rate === "string" ? s.rate : String(s.rate),
-      show: s.show ? 1 : 0,
-      network: s.network ?? "tcp",
-      sort: s.sort,
-      group_id: Array.isArray(s.group_id) ? s.group_id.join(",") : s.group_id ?? "",
-      cipher: s.cipher ?? "",
-      server_key: s.server_key ?? "",
-      tls: s.tls != null ? String(s.tls) : "0",
-      tls_settings: s.tls_settings ? JSON.stringify(s.tls_settings, null, 2) : "",
-      flow: s.flow ?? "",
-      network_settings: s.network_settings ? JSON.stringify(s.network_settings, null, 2) : "",
-      encryption: s.encryption ?? "",
-      up_mbps: s.up_mbps ?? 0,
-      down_mbps: s.down_mbps ?? 0,
-      obfs: s.obfs ?? "",
-      obfs_password: s.obfs_password ?? "",
-      udp_relay_mode: s.udp_relay_mode ?? "native",
-      zero_rtt_handshake: s.zero_rtt_handshake ? 1 : 0,
-      congestion_control: s.congestion_control ?? "bbr",
-      disable_sni: s.disable_sni ? 1 : 0,
-      padding_scheme: s.padding_scheme ? JSON.stringify(s.padding_scheme, null, 2) : "",
-      mieru_settings: s.mieru_settings ? JSON.stringify(s.mieru_settings, null, 2) : ""
-    });
-  }
+  const [editing, setEditing] = useState<{
+    mode: "create" | "edit";
+    protocol: Protocol;
+    initial?: AdminServer;
+  } | null>(null);
+
+  const rows = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    return q
+      ? all.filter(
+          (s) =>
+            s.name.toLowerCase().includes(q) ||
+            s.host.toLowerCase().includes(q) ||
+            String(s.id) === q
+        )
+      : all;
+  }, [data, search]);
+  const paged = rows.slice((page - 1) * PAGE, page * PAGE);
 
   const save = useMutation({
-    mutationFn: (input: Record<string, unknown>) => {
-      const payload: Record<string, unknown> = { ...input };
-      if (typeof payload.group_id === "string") {
-        payload.group_id = (payload.group_id as string)
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      }
-      // textarea -> JSON for the per-protocol JSON-shaped fields
-      for (const k of [
-        "tls_settings",
-        "network_settings",
-        "padding_scheme",
-        "mieru_settings"
-      ]) {
-        const v = payload[k];
-        if (typeof v === "string" && v.trim()) {
-          try {
-            payload[k] = JSON.parse(v as string);
-          } catch {
-            throw new Error(`${k} 不是合法的 JSON`);
-          }
-        }
-        if (typeof v === "string" && !v.trim()) {
-          delete payload[k];
-        }
-      }
-      payload.tls = Number(payload.tls ?? 0);
-      payload.zero_rtt_handshake = payload.zero_rtt_handshake ? 1 : 0;
-      payload.disable_sni = payload.disable_sni ? 1 : 0;
-      return apiPost("/admin/server/v2node/save", payload);
-    },
+    mutationFn: (payload: Record<string, unknown>) => apiPost("/admin/server/v2node/save", payload),
     onSuccess: () => {
-      toast.success("已保存");
+      toast.success("保存成功");
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
 
-  const drop = useMutation({
-    mutationFn: (s: AdminServer) => apiPost("/admin/server/v2node/drop", { id: s.id }),
+  const update = useMutation({
+    mutationFn: (input: { id: number; [k: string]: unknown }) =>
+      apiPost("/admin/server/v2node/update", input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] })
   });
+
+  const drop = useMutation({
+    mutationFn: (id: number) => apiPost("/admin/server/v2node/drop", { id }),
+    onSuccess: () => {
+      toast.success("已删除");
+      qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] });
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
+  });
+
   const copy = useMutation({
-    mutationFn: (s: AdminServer) => apiPost("/admin/server/v2node/copy", { id: s.id }),
+    mutationFn: (id: number) => apiPost("/admin/server/v2node/copy", { id }),
     onSuccess: () => {
       toast.success("已复制");
       qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] });
     }
   });
-  const toggleShow = useMutation({
-    mutationFn: (s: AdminServer) =>
-      apiPost("/admin/server/v2node/update", { id: s.id, show: s.show ? 0 : 1 }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.server.manage.getNodes"] }),
-    onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
-  });
 
   return (
     <>
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-3">
-          <div>
-            <Button size="sm" variant="outline" onClick={openCreate}>
-              <Plus className="size-4" />
-              添加节点
-            </Button>
+      <Card className="rounded">
+        <CardContent className="p-0">
+          {/* toolbar */}
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
+            <ProtocolMenu
+              onPick={(protocol) => setEditing({ mode: "create", protocol })}
+            />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="输入任意关键字搜索"
+              className="h-9 max-w-xs"
+            />
+            <div className="ml-auto">
+              <Button
+                size="sm"
+                variant="default"
+                className="h-9"
+              >
+                <ArrowDownUp className="size-4" />
+                编辑排序
+              </Button>
+            </div>
           </div>
+
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>显示</TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>协议</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>地址</TableHead>
-                <TableHead>倍率</TableHead>
-                <TableHead>在线人数</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+              <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                <TableHead className="text-slate-500">节点ID</TableHead>
+                <TableHead className="text-slate-500">显隐</TableHead>
+                <TableHead className="text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    节点
+                    <Help>节点名称及在线状态</Help>
+                  </span>
+                </TableHead>
+                <TableHead className="text-slate-500">地址</TableHead>
+                <TableHead className="text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    人数
+                    <Help>当前在线人数</Help>
+                  </span>
+                </TableHead>
+                <TableHead className="text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    倍率
+                    <Help>计费倍率,1x 表示按实际流量计费</Help>
+                  </span>
+                </TableHead>
+                <TableHead className="text-slate-500">权限组</TableHead>
+                <TableHead className="text-right text-slate-500">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={8}>
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
-              ) : !data || data.length === 0 ? (
+              ) : paged.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9}>
+                  <TableCell colSpan={8}>
                     <EmptyState />
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((s) => (
-                  <TableRow key={`${s.type}-${s.id}`}>
-                    <TableCell>{s.id}</TableCell>
-                    <TableCell>
-                      <Switch checked={Boolean(s.show)} onCheckedChange={() => toggleShow.mutate(s)} />
-                    </TableCell>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {PROTOCOL_LABEL[s.protocol ?? ""] ?? s.protocol ?? "—"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <NodeStatusDot
-                        availableStatus={s.available_status ?? null}
-                        isOnline={s.is_online ?? null}
-                      />
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {s.host}
-                      {s.port ? `:${s.port}` : ""}
-                    </TableCell>
-                    <TableCell>{s.rate}x</TableCell>
-                    <TableCell>{s.online ?? 0}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(s)}>
-                        <Pencil className="size-4" />
-                        编辑
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => copy.mutate(s)}>
-                        <Copy className="size-4" />
-                        复制
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => {
-                          if (confirm(`删除节点 "${s.name}"？`)) drop.mutate(s);
-                        }}
-                      >
-                        <Trash2 className="size-4" />
-                        删除
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                paged.map((s) => {
+                  const groupIds = Array.isArray(s.group_id)
+                    ? s.group_id.map(Number)
+                    : typeof s.group_id === "string"
+                      ? (() => {
+                          try {
+                            const parsed = JSON.parse(s.group_id);
+                            return Array.isArray(parsed) ? parsed.map(Number) : [];
+                          } catch {
+                            return [];
+                          }
+                        })()
+                      : [];
+                  const groupNames = groupIds
+                    .map((id) => groups.data?.find((g) => g.id === id)?.name ?? `#${id}`)
+                    .join(", ");
+                  return (
+                    <TableRow key={s.id} className="border-b border-slate-100">
+                      <TableCell>
+                        <ProtocolChip protocol={s.protocol}>{s.id}</ProtocolChip>
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={Boolean(s.show)}
+                          onCheckedChange={() =>
+                            update.mutate({ id: s.id, show: s.show ? 0 : 1 })
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-2">
+                          <NodeStatusDot
+                            availableStatus={s.available_status ?? null}
+                            isOnline={s.is_online ?? null}
+                          />
+                          <span>{s.name}</span>
+                        </span>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-slate-600">
+                        {s.host}
+                        {s.port ? `:${s.port}` : ""}
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-1 text-slate-600">
+                          <User className="size-3.5" strokeWidth={1.75} />
+                          {s.online ?? 0}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                          {s.rate} x
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-slate-600 text-xs">{groupNames || "—"}</TableCell>
+                      <TableCell className="text-right">
+                        <RowActions>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setEditing({ mode: "edit", protocol: s.protocol, initial: s })
+                            }
+                          >
+                            编辑
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => copy.mutate(s.id)}>
+                            复制
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm(`删除节点 "${s.name}"？`)) drop.mutate(s.id);
+                            }}
+                          >
+                            删除
+                          </DropdownMenuItem>
+                        </RowActions>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
+
+          <PaginationFooter
+            count={rows.length}
+            page={page}
+            pageSize={PAGE}
+            onChange={setPage}
+          />
         </CardContent>
       </Card>
 
-      <FormDialog
+      <DataDrawer
         open={editing !== null}
-        onOpenChange={(open) => !open && setEditing(null)}
-        title={editing && "id" in editing ? "编辑节点" : "添加节点"}
-        fields={fields}
-        values={values}
-        onChange={(k, v) => setValues((s) => ({ ...s, [k]: v }))}
-        onSubmit={() => save.mutate(values)}
+        onOpenChange={(o) => !o && setEditing(null)}
+        title={
+          editing
+            ? `${editing.mode === "create" ? "新建" : "编辑"} · ${PROTOCOLS[editing.protocol].label}`
+            : ""
+        }
         submitting={save.isPending}
-        size="lg"
-      />
+        onSubmit={() => {
+          /* submission is handled inside the form via ref */
+        }}
+        // we don't render the default footer because form has its own submit
+        footer={<div className="flex items-center justify-between border-t px-6 py-3" data-server-footer="auto" />}
+      >
+        {editing ? (
+          <ServerNodeForm
+            mode={editing.mode}
+            protocol={editing.protocol}
+            initial={editing.initial as Record<string, unknown> | undefined}
+            groups={groups.data ?? []}
+            routes={routes.data ?? []}
+            onCancel={() => setEditing(null)}
+            onSubmit={(payload) => save.mutate(payload)}
+            submitting={save.isPending}
+          />
+        ) : null}
+      </DataDrawer>
     </>
+  );
+}
+
+function Help({ children }: { children: React.ReactNode }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="size-3.5 text-slate-400" strokeWidth={1.75} />
+        </TooltipTrigger>
+        <TooltipContent>{children}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -4,8 +4,15 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -14,14 +21,8 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import { EmptyState } from "@/components/EmptyState";
+import { RowActions } from "@/components/admin/RowActions";
 import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
 
@@ -37,27 +38,32 @@ interface AdminOrder {
   created_at: number;
 }
 
-const PAGE_SIZE = 20;
-
-const STATUS: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  "0": { label: "待支付", variant: "secondary" },
-  "1": { label: "处理中", variant: "default" },
-  "2": { label: "已取消", variant: "outline" },
-  "3": { label: "已完成", variant: "default" },
-  "4": { label: "已折扣", variant: "outline" }
+const STATUS_TAG: Record<number, { label: string; cls: string }> = {
+  0: { label: "待支付", cls: "border-slate-300 bg-slate-50 text-slate-600" },
+  1: { label: "已支付", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
+  2: { label: "已取消", cls: "border-slate-300 bg-slate-50 text-slate-500" },
+  3: { label: "已完成", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
+  4: { label: "已折扣", cls: "border-indigo-200 bg-indigo-50 text-indigo-600" }
 };
+
+const PAGE = 10;
 
 export function AdminOrderPage() {
   const qc = useQueryClient();
-  const [filter, setFilter] = useState("");
-  const [tradeNo, setTradeNo] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("all");
   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.order.fetch", page, filter, tradeNo],
+    queryKey: ["admin.order.fetch", page, search, status],
     queryFn: () =>
       apiGetEnvelope<AdminOrder[]>("/admin/order/fetch", {
-        params: { page, page_size: PAGE_SIZE, status: filter || undefined, trade_no: tradeNo || undefined }
+        params: {
+          page,
+          page_size: PAGE,
+          trade_no: search || undefined,
+          status: status === "all" ? undefined : status
+        }
       })
   });
 
@@ -72,44 +78,48 @@ export function AdminOrderPage() {
   });
 
   const rows = data?.data ?? [];
-  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE));
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-3">
-        <div className="flex items-center gap-2">
+    <Card className="rounded">
+      <CardContent className="p-0">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100">
           <Input
-            value={tradeNo}
-            onChange={(e) => setTradeNo(e.target.value)}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="订单号"
-            className="w-56"
+            className="h-9 max-w-xs"
           />
-          <Select value={filter} onValueChange={(v) => setFilter(v === "_all" ? "" : v)}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="状态" />
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="h-9 w-32">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="_all">全部</SelectItem>
+              <SelectItem value="all">全部状态</SelectItem>
               <SelectItem value="0">待支付</SelectItem>
-              <SelectItem value="1">处理中</SelectItem>
+              <SelectItem value="1">已支付</SelectItem>
               <SelectItem value="2">已取消</SelectItem>
               <SelectItem value="3">已完成</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => setPage(1)}>查询</Button>
+          <Button size="sm" className="h-9" onClick={() => setPage(1)}>
+            查询
+          </Button>
+          <span className="ml-auto text-xs text-slate-500">共 {total} 笔订单</span>
         </div>
 
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>订单号</TableHead>
-              <TableHead>用户</TableHead>
-              <TableHead>订阅</TableHead>
-              <TableHead>金额</TableHead>
-              <TableHead>周期</TableHead>
-              <TableHead>状态</TableHead>
-              <TableHead>创建时间</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+            <TableRow className="border-b border-slate-100 hover:bg-transparent">
+              <TableHead className="text-slate-500">订单号</TableHead>
+              <TableHead className="text-slate-500">用户</TableHead>
+              <TableHead className="text-slate-500">订阅</TableHead>
+              <TableHead className="text-slate-500">金额</TableHead>
+              <TableHead className="text-slate-500">周期</TableHead>
+              <TableHead className="text-slate-500">状态</TableHead>
+              <TableHead className="text-slate-500">创建时间</TableHead>
+              <TableHead className="text-right text-slate-500">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -127,34 +137,45 @@ export function AdminOrderPage() {
               </TableRow>
             ) : (
               rows.map((o) => {
-                const st = STATUS[String(o.status)] ?? { label: String(o.status), variant: "outline" as const };
+                const st = STATUS_TAG[o.status] ?? { label: String(o.status), cls: "" };
                 return (
-                  <TableRow key={o.id}>
+                  <TableRow key={o.id} className="border-b border-slate-100">
                     <TableCell className="font-mono text-xs">{o.trade_no}</TableCell>
-                    <TableCell>{o.user?.email ?? `#${o.id}`}</TableCell>
-                    <TableCell>{o.plan?.name ?? "—"}</TableCell>
-                    <TableCell>¥ {formatCny(o.total_amount)}</TableCell>
-                    <TableCell>{o.period}</TableCell>
-                    <TableCell>
-                      <Badge variant={st.variant}>{st.label}</Badge>
+                    <TableCell className="text-slate-600">
+                      {o.user?.email ?? `#${o.id}`}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{formatUnixDate(o.created_at)}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      {o.status === 0 ? (
-                        <>
-                          <Button size="sm" variant="ghost" onClick={() => paid.mutate(o.trade_no)}>
-                            标记已支付
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => cancel.mutate(o.trade_no)}
-                          >
-                            取消
-                          </Button>
-                        </>
-                      ) : null}
+                    <TableCell className="text-slate-600">{o.plan?.name ?? "-"}</TableCell>
+                    <TableCell className="text-slate-600">¥ {formatCny(o.total_amount)}</TableCell>
+                    <TableCell className="text-slate-600">{o.period}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded border px-2 py-0.5 text-xs ${st.cls}`}
+                      >
+                        {st.label}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-xs text-slate-500">
+                      {formatUnixDate(o.created_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <RowActions>
+                        {o.status === 0 ? (
+                          <>
+                            <DropdownMenuItem onClick={() => paid.mutate(o.trade_no)}>
+                              标记已支付
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => cancel.mutate(o.trade_no)}
+                            >
+                              取消订单
+                            </DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem disabled>无可用操作</DropdownMenuItem>
+                        )}
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 );
@@ -163,21 +184,29 @@ export function AdminOrderPage() {
           </TableBody>
         </Table>
 
-        <div className="flex justify-end gap-2 pt-2 text-sm">
-          <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-            上一页
+        <div className="flex items-center justify-end gap-1 px-4 py-3 text-xs">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="size-7 p-0"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            ‹
           </Button>
-          <span className="px-2 self-center text-muted-foreground">
-            第 {page} / {totalPages} 页
+          <span className="inline-flex size-7 items-center justify-center rounded border border-primary bg-white text-primary">
+            {page}
           </span>
           <Button
             size="sm"
-            variant="outline"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            variant="ghost"
+            className="size-7 p-0"
             disabled={page >= totalPages}
+            onClick={() => setPage(page + 1)}
           >
-            下一页
+            ›
           </Button>
+          <span className="ml-2 inline-flex items-center text-slate-500">10 条 / 页</span>
         </div>
       </CardContent>
     </Card>

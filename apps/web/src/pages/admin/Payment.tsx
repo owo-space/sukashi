@@ -1,22 +1,13 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -25,8 +16,10 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { EmptyState } from "@/components/EmptyState";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { EmptyState } from "@/components/EmptyState";
+import { RowActions } from "@/components/admin/RowActions";
+import { DataDrawer } from "@/components/admin/DataDrawer";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 
 interface AdminPayment {
@@ -41,9 +34,6 @@ interface AdminPayment {
     stripe_webhook_secret?: string;
     currency?: string;
   };
-  notify_domain?: string | null;
-  handling_fee_fixed?: number | null;
-  handling_fee_percent?: string | null;
 }
 
 export function AdminPaymentPage() {
@@ -53,83 +43,83 @@ export function AdminPaymentPage() {
     queryFn: () => apiGet<AdminPayment[]>("/admin/payment/fetch")
   });
 
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<AdminPayment | null>(null);
+  const [editing, setEditing] = useState<{ mode: "create" | "edit"; row?: AdminPayment } | null>(
+    null
+  );
+  const [form, setForm] = useState<Record<string, unknown>>({
+    name: "Stripe",
+    payment: "Stripe",
+    enable: 1,
+    config: { currency: "usd" }
+  });
 
   const save = useMutation({
-    mutationFn: (input: Partial<AdminPayment>) => apiPost("/admin/payment/save", input),
+    mutationFn: () => apiPost("/admin/payment/save", form),
     onSuccess: () => {
       toast.success("已保存");
-      setOpen(false);
       setEditing(null);
       qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : (e as Error).message)
   });
-
-  const show = useMutation({
+  const showToggle = useMutation({
     mutationFn: (p: AdminPayment) =>
       apiPost("/admin/payment/show", { id: p.id, show: p.enable ? 0 : 1 }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] })
   });
-
   const drop = useMutation({
     mutationFn: (id: number) => apiPost("/admin/payment/drop", { id }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["admin.payment.fetch"] })
   });
 
+  const cfg = (form.config as Record<string, string>) ?? {};
+
+  function setConfig(key: string, value: string) {
+    setForm((f) => ({ ...f, config: { ...(f.config as object), [key]: value } }));
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <Alert>
         <AlertDescription>
-          Sukashi 仅支持 Stripe。请在 Stripe Dashboard → Developers → API keys 取得密钥,并把
-          webhook 指向{" "}
-          <span className="font-mono">
+          Sukashi 仅支持 Stripe。请在 Stripe Dashboard → Developers → API keys 取得密钥,Webhook
+          地址指向{" "}
+          <code className="text-xs">
             {window.location.origin}/api/v1/guest/payment/notify/Stripe/&lt;payment-uuid&gt;
-          </span>
+          </code>
         </AlertDescription>
       </Alert>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base font-medium">支付配置</CardTitle>
-          <Dialog
-            open={open}
-            onOpenChange={(o) => {
-              setOpen(o);
-              if (!o) setEditing(null);
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setOpen(true);
-                }}
-              >
-                <Plus className="size-4" />
-                添加 Stripe
-              </Button>
-            </DialogTrigger>
-            <PaymentDialog
-              key={editing?.id ?? "new"}
-              value={editing}
-              onSubmit={(v) => save.mutate(v)}
-              submitting={save.isPending}
-            />
-          </Dialog>
-        </CardHeader>
+      <Card className="rounded">
         <CardContent className="p-0">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 gap-1"
+              onClick={() => {
+                setForm({
+                  name: "Stripe",
+                  payment: "Stripe",
+                  enable: 1,
+                  config: { currency: "usd" }
+                });
+                setEditing({ mode: "create" });
+              }}
+            >
+              <Plus className="size-4" />
+              添加 Stripe
+            </Button>
+          </div>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>状态</TableHead>
-                <TableHead>UUID</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+              <TableRow className="border-b border-slate-100 hover:bg-transparent">
+                <TableHead className="text-slate-500">ID</TableHead>
+                <TableHead className="text-slate-500">名称</TableHead>
+                <TableHead className="text-slate-500">类型</TableHead>
+                <TableHead className="text-slate-500">状态</TableHead>
+                <TableHead className="text-slate-500">UUID</TableHead>
+                <TableHead className="text-right text-slate-500">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,40 +137,48 @@ export function AdminPaymentPage() {
                 </TableRow>
               ) : (
                 data.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>{p.id}</TableCell>
-                    <TableCell className="font-medium">{p.name}</TableCell>
+                  <TableRow key={p.id} className="border-b border-slate-100">
+                    <TableCell className="text-slate-600">{p.id}</TableCell>
+                    <TableCell>{p.name}</TableCell>
                     <TableCell>
-                      <Badge>{p.payment}</Badge>
+                      <span className="inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs text-indigo-600">
+                        {p.payment}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Switch
                         checked={Boolean(p.enable)}
-                        onCheckedChange={() => show.mutate(p)}
+                        onCheckedChange={() => showToggle.mutate(p)}
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{p.uuid}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(p);
-                          setOpen(true);
-                        }}
-                      >
-                        <Pencil className="size-4" />
-                        编辑
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        onClick={() => drop.mutate(p.id)}
-                      >
-                        <Trash2 className="size-4" />
-                        删除
-                      </Button>
+                    <TableCell className="font-mono text-xs text-slate-500">{p.uuid}</TableCell>
+                    <TableCell className="text-right">
+                      <RowActions>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setForm({
+                              id: p.id,
+                              uuid: p.uuid,
+                              name: p.name,
+                              payment: p.payment,
+                              enable: p.enable ? 1 : 0,
+                              config: p.config ?? {}
+                            });
+                            setEditing({ mode: "edit", row: p });
+                          }}
+                        >
+                          编辑
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm(`删除 "${p.name}"？`)) drop.mutate(p.id);
+                          }}
+                        >
+                          删除
+                        </DropdownMenuItem>
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 ))
@@ -189,93 +187,78 @@ export function AdminPaymentPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <DataDrawer
+        open={editing !== null}
+        onOpenChange={(o) => !o && setEditing(null)}
+        title={editing?.mode === "edit" ? "编辑支付方式" : "添加支付方式"}
+        submitting={save.isPending}
+        onSubmit={() => save.mutate()}
+      >
+        <div className="flex flex-col gap-3">
+          <Field label="名称" required>
+            <Input
+              value={String(form.name ?? "")}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </Field>
+          <Field label="Stripe Publishable Key">
+            <Input
+              placeholder="pk_live_..."
+              value={cfg.stripe_public_key ?? ""}
+              onChange={(e) => setConfig("stripe_public_key", e.target.value)}
+            />
+          </Field>
+          <Field label="Stripe Secret Key" required>
+            <Input
+              type="password"
+              placeholder="sk_live_..."
+              value={cfg.stripe_secret_key ?? ""}
+              onChange={(e) => setConfig("stripe_secret_key", e.target.value)}
+            />
+          </Field>
+          <Field label="Webhook Signing Secret">
+            <Input
+              placeholder="whsec_..."
+              value={cfg.stripe_webhook_secret ?? ""}
+              onChange={(e) => setConfig("stripe_webhook_secret", e.target.value)}
+            />
+          </Field>
+          <Field label="货币 (lowercase ISO 4217)">
+            <Input
+              placeholder="usd / cny / hkd"
+              value={cfg.currency ?? "usd"}
+              onChange={(e) => setConfig("currency", e.target.value)}
+            />
+          </Field>
+          <Field label="启用">
+            <Switch
+              checked={Boolean(form.enable)}
+              onCheckedChange={(c) => setForm((f) => ({ ...f, enable: c ? 1 : 0 }))}
+            />
+          </Field>
+        </div>
+      </DataDrawer>
     </div>
   );
 }
 
-function PaymentDialog({
-  value,
-  onSubmit,
-  submitting
+function Field({
+  label,
+  required,
+  children
 }: {
-  value: AdminPayment | null;
-  onSubmit: (v: Partial<AdminPayment>) => void;
-  submitting: boolean;
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
 }) {
-  const [name, setName] = useState(value?.name ?? "Stripe");
-  const [stripePublic, setStripePublic] = useState(value?.config?.stripe_public_key ?? "");
-  const [stripeSecret, setStripeSecret] = useState(value?.config?.stripe_secret_key ?? "");
-  const [webhook, setWebhook] = useState(value?.config?.stripe_webhook_secret ?? "");
-  const [currency, setCurrency] = useState(value?.config?.currency ?? "usd");
-
   return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{value ? "编辑支付方式" : "新建支付方式"}</DialogTitle>
-      </DialogHeader>
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="name">名称</Label>
-          <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="stripePublic">Stripe Publishable Key</Label>
-          <Input
-            id="stripePublic"
-            placeholder="pk_live_..."
-            value={stripePublic}
-            onChange={(e) => setStripePublic(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="stripeSecret">Stripe Secret Key</Label>
-          <Input
-            id="stripeSecret"
-            placeholder="sk_live_..."
-            value={stripeSecret}
-            onChange={(e) => setStripeSecret(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="webhook">Webhook Signing Secret</Label>
-          <Input
-            id="webhook"
-            placeholder="whsec_..."
-            value={webhook}
-            onChange={(e) => setWebhook(e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="currency">Currency (lowercase ISO 4217)</Label>
-          <Input
-            id="currency"
-            placeholder="usd / cny / hkd"
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button
-          onClick={() =>
-            onSubmit({
-              ...(value ? { id: value.id, uuid: value.uuid } : {}),
-              name,
-              payment: "Stripe",
-              enable: value?.enable ?? 1,
-              config: {
-                stripe_public_key: stripePublic,
-                stripe_secret_key: stripeSecret,
-                stripe_webhook_secret: webhook,
-                currency
-              }
-            })
-          }
-          disabled={submitting || !stripeSecret}
-        >
-          保存
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm">
+        {label}
+        {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
+      </span>
+      {children}
+    </div>
   );
 }
