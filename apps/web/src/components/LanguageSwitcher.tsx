@@ -30,7 +30,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
             <span className={compact ? "text-xs" : "sm:hidden"}>{current.shortLabel}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuContent align="end" className="w-40" data-i18n-skip>
           {LOCALES.map((item) => (
             <DropdownMenuItem
               key={item.code}

@@ -5,6 +5,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
@@ -23,7 +24,13 @@ export const LOCALES: Array<{
 ];
 
 const STORAGE_KEY = "sukashi.locale";
-const TEXT_SOURCE = new WeakMap<Text, string>();
+// For each translated text node / attribute we remember both the source
+// (the canonical zh-CN string we translate from) and the last output we
+// actually wrote into the DOM. That lets the MutationObserver tell apart
+// (a) "we are seeing our own previous output, switch source through" from
+// (b) "React wrote new content into this node, adopt it as the new source".
+const TEXT_STATE = new WeakMap<Text, { source: string; output: string }>();
+const ATTR_STATE = new WeakMap<Element, Map<string, { source: string; output: string }>>();
 const ATTRS = ["placeholder", "title", "aria-label"] as const;
 const SKIP_TAGS = new Set([
   "SCRIPT",
@@ -38,7 +45,9 @@ const SKIP_TAGS = new Set([
 
 const EN: Record<string, string> = {
   "语言": "Language",
+  "簡體中文": "Simplified Chinese",
   "简体中文": "Simplified Chinese",
+  "繁體中文": "Traditional Chinese",
   "繁体中文": "Traditional Chinese",
   "菜单": "Menu",
   "设置": "Settings",
@@ -526,7 +535,9 @@ const EN: Record<string, string> = {
 const JA: Record<string, string> = {
   ...EN,
   "语言": "言語",
+  "簡體中文": "簡体字中国語",
   "简体中文": "簡体字中国語",
+  "繁體中文": "繁体字中国語",
   "繁体中文": "繁体字中国語",
   "菜单": "メニュー",
   "设置": "設定",
@@ -1211,7 +1222,7 @@ function replaceKnownTerms(source: string, locale: Locale): string {
   if (locale === "zh-TW") return convertToTraditional(source);
   const dictionary = locale === "ja" ? JA : EN;
   const terms = Object.entries(dictionary)
-    .filter(([from]) => /[\p{Script=Han}]/u.test(from))
+    .filter(([from]) => from.trim().length > 1 && /[\p{Script=Han}]/u.test(from))
     .sort((a, b) => b[0].length - a[0].length);
   let output = source;
   for (const [from, to] of terms) {
@@ -1257,27 +1268,31 @@ function shouldSkipNode(node: Node): boolean {
 function localizeTextNode(node: Text, locale: Locale) {
   const raw = node.nodeValue ?? "";
   if (!raw.trim() || shouldSkipNode(node)) return;
-  const source = /[\p{Script=Han}]/u.test(raw) ? raw : TEXT_SOURCE.get(node) ?? raw;
-  TEXT_SOURCE.set(node, source);
+  // If the current raw matches the output we last wrote, we're looking at
+  // our own translation and should keep the original source. Otherwise the
+  // DOM was rewritten by React (price changed, email loaded, …) and raw is
+  // the new source we should translate going forward.
+  const prev = TEXT_STATE.get(node);
+  const source = prev && prev.output === raw ? prev.source : raw;
   const next = translateText(source, locale);
+  TEXT_STATE.set(node, { source, output: next });
   if (next !== raw) node.nodeValue = next;
-}
-
-function sourceAttrName(attr: string): string {
-  return `data-i18n-${attr.replace(/[^a-z0-9]+/gi, "-")}-source`;
 }
 
 function localizeElement(element: Element, locale: Locale) {
   if (shouldSkipNode(element)) return;
+  let map = ATTR_STATE.get(element);
   for (const attr of ATTRS) {
     const raw = element.getAttribute(attr);
     if (!raw?.trim()) continue;
-    const sourceAttr = sourceAttrName(attr);
-    const source = /[\p{Script=Han}]/u.test(raw)
-      ? raw
-      : element.getAttribute(sourceAttr) ?? raw;
-    element.setAttribute(sourceAttr, source);
+    const prev = map?.get(attr);
+    const source = prev && prev.output === raw ? prev.source : raw;
     const next = translateText(source, locale);
+    if (!map) {
+      map = new Map();
+      ATTR_STATE.set(element, map);
+    }
+    map.set(attr, { source, output: next });
     if (next !== raw) element.setAttribute(attr, next);
   }
 }
@@ -1324,6 +1339,14 @@ function interpolate(source: string, vars?: Record<string, string | number>): st
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => detectLocale());
 
+  // The MutationObserver below is registered once and reads `localeRef.current`
+  // every time it fires. Without this, the observer would close over the
+  // locale value at the time it was created and, after a switch, see any
+  // text we just translated as "needs to be translated again" with the OLD
+  // locale — silently undoing the switch until the next full reload.
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     try {
@@ -1346,13 +1369,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof MutationObserver === "undefined") return;
     const observer = new MutationObserver((mutations) => {
+      const cur = localeRef.current;
       for (const mutation of mutations) {
         if (mutation.type === "characterData") {
-          localizeTextNode(mutation.target as Text, locale);
+          localizeTextNode(mutation.target as Text, cur);
         } else if (mutation.type === "attributes") {
-          localizeElement(mutation.target as Element, locale);
+          localizeElement(mutation.target as Element, cur);
         } else {
-          mutation.addedNodes.forEach((node) => localizeSubtree(node, locale));
+          mutation.addedNodes.forEach((node) => localizeSubtree(node, cur));
         }
       }
     });
@@ -1364,16 +1388,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       attributeFilter: [...ATTRS]
     });
     return () => observer.disconnect();
-  }, [locale]);
+  }, []);
 
   useEffect(() => {
     const original = window.confirm.bind(window);
     window.confirm = (message?: string) =>
-      original(typeof message === "string" ? translateText(message, locale) : message);
+      original(typeof message === "string" ? translateText(message, localeRef.current) : message);
     return () => {
       window.confirm = original;
     };
-  }, [locale]);
+  }, []);
 
   const value = useMemo<I18nContextValue>(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
