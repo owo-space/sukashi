@@ -358,8 +358,34 @@ function buildSnellSurgeLine(uuid: string, server: ServerNode): string {
   return parts.join(", ");
 }
 
+/**
+ * Snell for Shadowrocket / Quantumult X — these clients do NOT read Surge's
+ * "name = snell, ..." config line; they expect a snell:// URI whose authority
+ * is the legacy-SS base64 of "<cipher>:<psk>@<host>:<port>", with version/tfo
+ * carried as query params. The leading cipher token is vestigial for Snell
+ * (its transport key is derived from the PSK), but Shadowrocket still splits on
+ * the ":" to pull the PSK, so we emit a stable placeholder when no cipher is
+ * configured on the node.
+ */
+function buildSnellShadowrocketUri(uuid: string, server: ServerNode): string {
+  const cipher = server.cipher || "chacha20-ietf-poly1305";
+  const authority = base64(
+    `${cipher}:${uuid}@${formatHost(server.host)}:${clientPort(server)}`
+  ).replace(/=+$/, "");
+  const params = new URLSearchParams();
+  params.set("tfo", "1");
+  params.set("version", String(snellVersionOf(server)));
+  if (server.obfs) {
+    params.set("obfs", server.obfs);
+    if (server.obfsPassword) params.set("obfs-host", server.obfsPassword);
+  }
+  return `snell://${authority}?${params.toString()}#${encodeURIComponent(server.name)}`;
+}
+
 function buildShadowrocketLink(uuid: string, server: ServerNode): string | null {
-  if (protocolOf(server) === "mieru") return buildMieruShadowrocketUri(uuid, server);
+  const protocol = protocolOf(server);
+  if (protocol === "mieru") return buildMieruShadowrocketUri(uuid, server);
+  if (protocol === "snell") return buildSnellShadowrocketUri(uuid, server);
   return buildGeneralLink(uuid, server);
 }
 
@@ -634,7 +660,12 @@ function detectFlag(query: string | undefined, userAgent: string | undefined): s
   const ua = (userAgent ?? "").toLowerCase();
   if (ua.includes("mihomo") || ua.includes("clash.meta") || ua.includes("clash")) return "clash";
   if (ua.includes("sing-box") || ua.includes("singbox")) return "sing";
-  if (ua.includes("shadowrocket") || ua.includes("quantumult") || ua.includes("surge") || ua.includes("loon") || ua.includes("stash")) {
+  // Surge is the only client that reads the "name = snell, ..." config line, so
+  // it gets its own flag and falls through to the general/text branch (which
+  // emits that line for Snell). Shadowrocket/Quantumult instead want a snell://
+  // URI, handled by the dedicated shadowrocket branch below.
+  if (ua.includes("surge")) return "surge";
+  if (ua.includes("shadowrocket") || ua.includes("quantumult") || ua.includes("loon") || ua.includes("stash")) {
     return "shadowrocket";
   }
   if (ua.includes("v2rayng") || ua.includes("v2rayn") || ua.includes("v2box") || ua.includes("nekoray")) {
