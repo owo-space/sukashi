@@ -26,9 +26,12 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { RowActions } from "@/components/admin/RowActions";
 import { DataDrawer } from "@/components/admin/DataDrawer";
+import { Pagination } from "@/components/admin/Pagination";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
+
+const PAGE = 10;
 
 interface Coupon {
   id: number;
@@ -64,10 +67,16 @@ function unixToDateTimeISO(u: number | null | undefined): string {
 
 export function AdminCouponPage() {
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.coupon.fetch"],
-    queryFn: () => apiGet<Coupon[]>("/admin/coupon/fetch")
+    queryKey: ["admin.coupon.fetch", page],
+    queryFn: () =>
+      apiGetEnvelope<Coupon[]>("/admin/coupon/fetch", {
+        params: { current: page, pageSize: PAGE }
+      })
   });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   const [mode, setMode] = useState<"create" | "edit" | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>({});
@@ -181,14 +190,14 @@ export function AdminCouponPage() {
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
-              ) : !data || data.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10}>
                     <EmptyState />
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((c) => (
+                rows.map((c) => (
                   <TableRow key={c.id} className="border-b border-border">
                     <TableCell className="text-foreground/80">{c.id}</TableCell>
                     <TableCell>{c.name}</TableCell>
@@ -244,6 +253,7 @@ export function AdminCouponPage() {
               )}
             </TableBody>
           </Table>
+          <Pagination page={page} total={total} pageSize={PAGE} onPage={setPage} />
         </CardContent>
       </Card>
 

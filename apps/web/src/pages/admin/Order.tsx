@@ -59,8 +59,8 @@ export function AdminOrderPage() {
     queryFn: () =>
       apiGetEnvelope<AdminOrder[]>("/admin/order/fetch", {
         params: {
-          page,
-          page_size: PAGE,
+          current: page,
+          pageSize: PAGE,
           trade_no: search || undefined,
           status: status === "all" ? undefined : status
         }

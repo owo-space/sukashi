@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,8 +14,11 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
 import { RowActions } from "@/components/admin/RowActions";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { Pagination } from "@/components/admin/Pagination";
+import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatUnixDate } from "@/lib/format";
+
+const PAGE = 10;
 
 interface AdminTicket {
   id: number;
@@ -32,10 +36,16 @@ const LEVEL_LABEL: Record<number, string> = { 0: "低", 1: "中", 2: "高" };
 
 export function AdminTicketPage() {
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.ticket.fetch"],
-    queryFn: () => apiGet<AdminTicket[]>("/admin/ticket/fetch")
+    queryKey: ["admin.ticket.fetch", page],
+    queryFn: () =>
+      apiGetEnvelope<AdminTicket[]>("/admin/ticket/fetch", {
+        params: { current: page, pageSize: PAGE }
+      })
   });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   const close = useMutation({
     mutationFn: (id: number) => apiPost("/admin/ticket/close", { id }),
@@ -66,14 +76,14 @@ export function AdminTicketPage() {
                   <Skeleton className="h-8 w-full" />
                 </TableCell>
               </TableRow>
-            ) : !data || data.length === 0 ? (
+            ) : rows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8}>
                   <EmptyState />
                 </TableCell>
               </TableRow>
             ) : (
-              data.map((t) => (
+              rows.map((t) => (
                 <TableRow key={t.id} className="border-b border-border">
                   <TableCell className="text-foreground/80">{t.id}</TableCell>
                   <TableCell className="text-foreground/80">{t.user?.email ?? `#${t.user_id}`}</TableCell>
@@ -106,6 +116,7 @@ export function AdminTicketPage() {
             )}
           </TableBody>
         </Table>
+        <Pagination page={page} total={total} pageSize={PAGE} onPage={setPage} />
       </CardContent>
     </Card>
   );

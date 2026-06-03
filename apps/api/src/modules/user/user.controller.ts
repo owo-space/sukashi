@@ -717,6 +717,14 @@ export class AdminUserController {
     const sortField = parseSortField(query.sort);
     const sortType = parseSortType(query.sort_type);
     const where = await this.buildFilterWhere(query.filter);
+    // The admin UI sends flat email/banned params rather than a filter[]
+    // array, so merge them into the where clause here.
+    if (query.email !== undefined && query.email !== "") {
+      where.email = { contains: String(query.email), mode: "insensitive" };
+    }
+    if (query.banned !== undefined && query.banned !== "") {
+      where.banned = asBoolean(query.banned);
+    }
 
     const [users, total, plans] = await Promise.all([
       this.prisma.user.findMany({

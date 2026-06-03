@@ -205,7 +205,24 @@ export class StaffTicketController {
       }),
       this.prisma.ticket.count({ where })
     ]);
-    return { data: toJsonSafe(tickets), total, code: 200, message: "" };
+    // Ticket has a scalar user_id but no Prisma relation, so join manually to
+    // show the submitter's email in the admin list.
+    const userIds = Array.from(new Set(tickets.map((t) => t.userId)));
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, email: true }
+        })
+      : [];
+    const userById = new Map(users.map((u) => [u.id, u]));
+    return {
+      data: toJsonSafe(
+        tickets.map((t) => ({ ...t, user: userById.get(t.userId) ?? null }))
+      ),
+      total,
+      code: 200,
+      message: ""
+    };
   }
 
   @Post("reply")

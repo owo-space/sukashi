@@ -281,16 +281,15 @@ export class AdminOrderController {
     const pageSize = Math.max(1, Math.min(500, firstQueryNumber(query.pageSize, 10)));
     const skip = (current - 1) * pageSize;
     const where: Prisma.OrderWhereInput = {};
-    const filter = (query.filter ?? []) as Array<Record<string, unknown>>;
-    if (Array.isArray(filter)) {
-      for (const raw of filter) {
-        const key = String(raw.key ?? "");
-        const value = raw.value;
-        if (!key || value === undefined || value === "") continue;
-        if (key === "user_id") where.userId = Number(value);
-        if (key === "trade_no") where.tradeNo = String(value);
-        if (key === "status") where.status = Number(value);
-      }
+    // The admin UI sends flat query params (trade_no/status/user_id).
+    if (query.trade_no !== undefined && query.trade_no !== "") {
+      where.tradeNo = String(query.trade_no);
+    }
+    if (query.user_id !== undefined && query.user_id !== "") {
+      where.userId = Number(query.user_id);
+    }
+    if (query.status !== undefined && query.status !== "") {
+      where.status = Number(query.status);
     }
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
@@ -301,7 +300,38 @@ export class AdminOrderController {
       }),
       this.prisma.order.count({ where })
     ]);
-    return { data: toJsonSafe(orders), total, code: 200, message: "" };
+    // Order carries scalar user_id/plan_id but no Prisma relations, so the
+    // admin list needs a manual join to show who placed each order.
+    const userIds = Array.from(new Set(orders.map((o) => o.userId)));
+    const planIds = Array.from(new Set(orders.map((o) => o.planId)));
+    const [users, plans] = await Promise.all([
+      userIds.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, email: true }
+          })
+        : [],
+      planIds.length
+        ? this.prisma.plan.findMany({
+            where: { id: { in: planIds } },
+            select: { id: true, name: true }
+          })
+        : []
+    ]);
+    const userById = new Map(users.map((u) => [u.id, u]));
+    const planById = new Map(plans.map((p) => [p.id, p]));
+    return {
+      data: toJsonSafe(
+        orders.map((o) => ({
+          ...o,
+          user: userById.get(o.userId) ?? null,
+          plan: planById.get(o.planId) ?? null
+        }))
+      ),
+      total,
+      code: 200,
+      message: ""
+    };
   }
 
   @All("detail")

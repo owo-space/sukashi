@@ -26,8 +26,11 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { RowActions } from "@/components/admin/RowActions";
 import { DataDrawer } from "@/components/admin/DataDrawer";
-import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { Pagination } from "@/components/admin/Pagination";
+import { ApiError, apiGetEnvelope, apiPost } from "@/lib/api";
 import { formatCny, formatUnixDate } from "@/lib/format";
+
+const PAGE = 10;
 
 interface Giftcard {
   id: number;
@@ -49,10 +52,16 @@ function isoToUnix(s: string): number {
 
 export function AdminGiftcardPage() {
   const qc = useQueryClient();
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
-    queryKey: ["admin.giftcard.fetch"],
-    queryFn: () => apiGet<Giftcard[]>("/admin/giftcard/fetch")
+    queryKey: ["admin.giftcard.fetch", page],
+    queryFn: () =>
+      apiGetEnvelope<Giftcard[]>("/admin/giftcard/fetch", {
+        params: { current: page, pageSize: PAGE }
+      })
   });
+  const rows = data?.data ?? [];
+  const total = data?.total ?? 0;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Record<string, unknown>>({
@@ -123,14 +132,14 @@ export function AdminGiftcardPage() {
                     <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
-              ) : !data || data.length === 0 ? (
+              ) : rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7}>
                     <EmptyState />
                   </TableCell>
                 </TableRow>
               ) : (
-                data.map((g) => (
+                rows.map((g) => (
                   <TableRow key={g.id} className="border-b border-border">
                     <TableCell className="text-foreground/80">{g.id}</TableCell>
                     <TableCell>{g.name}</TableCell>
@@ -164,6 +173,7 @@ export function AdminGiftcardPage() {
               )}
             </TableBody>
           </Table>
+          <Pagination page={page} total={total} pageSize={PAGE} onPage={setPage} />
         </CardContent>
       </Card>
 
