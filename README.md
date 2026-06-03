@@ -53,15 +53,10 @@ docker compose up -d
 ```
 
 `compose.yaml` pulls the prebuilt image `ghcr.io/owo-space/sukashi:latest`
-(built by CI), so no local build is needed. The app entrypoint runs
+(built by CI) with `pull_policy: always`, so every `docker compose up -d`
+fetches the newest image — no local build needed. The app entrypoint runs
 `prisma migrate deploy` automatically on boot, then starts the API. Visit
 `http://127.0.0.1:3000` (or your reverse-proxy host).
-
-Pin a specific tag with `SUKASHI_TAG` (in `.env` or the environment):
-
-```bash
-SUKASHI_TAG=sha-c156d58 docker compose up -d
-```
 
 ### Build the image locally instead
 
