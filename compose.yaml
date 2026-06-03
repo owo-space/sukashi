@@ -1,9 +1,10 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: sukashi:local
+    # Prebuilt image from GHCR (built by .github/workflows/docker.yml).
+    # Override the tag with SUKASHI_TAG, e.g. SUKASHI_TAG=sha-c156d58.
+    # To build locally instead, use: docker compose -f compose.yaml -f compose.build.yaml up -d
+    image: ghcr.io/owo-space/sukashi:${SUKASHI_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:

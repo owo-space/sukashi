@@ -52,23 +52,21 @@ cp .env.example .env
 docker compose up -d
 ```
 
-The app entrypoint runs `prisma migrate deploy` automatically on boot, then
-starts the API. Visit `http://127.0.0.1:3000` (or your reverse-proxy host).
+`compose.yaml` pulls the prebuilt image `ghcr.io/owo-space/sukashi:latest`
+(built by CI), so no local build is needed. The app entrypoint runs
+`prisma migrate deploy` automatically on boot, then starts the API. Visit
+`http://127.0.0.1:3000` (or your reverse-proxy host).
 
-### Run the prebuilt image from GHCR
-
-Instead of building locally, point the `app` service at the published image:
-
-```yaml
-# compose.override.yaml
-services:
-  app:
-    build: !reset null
-    image: ghcr.io/owo-space/sukashi:latest
-```
+Pin a specific tag with `SUKASHI_TAG` (in `.env` or the environment):
 
 ```bash
-docker compose pull && docker compose up -d
+SUKASHI_TAG=sha-c156d58 docker compose up -d
+```
+
+### Build the image locally instead
+
+```bash
+docker compose -f compose.yaml -f compose.build.yaml up -d --build
 ```
 
 Tags published to `ghcr.io/owo-space/sukashi`:
