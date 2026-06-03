@@ -75,7 +75,7 @@ export function AdminThemePage() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base font-medium">主题配置 — 管理端</CardTitle>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-muted-foreground">
           此处的设置只影响管理后台。用户端的样式请在「系统配置」→「个性化」中调整。
         </div>
       </CardHeader>

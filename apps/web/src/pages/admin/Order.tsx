@@ -39,9 +39,9 @@ interface AdminOrder {
 }
 
 const STATUS_TAG: Record<number, { label: string; cls: string }> = {
-  0: { label: "待支付", cls: "border-slate-300 bg-slate-50 text-slate-600" },
+  0: { label: "待支付", cls: "border-border bg-muted/40 text-foreground/80" },
   1: { label: "已支付", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
-  2: { label: "已取消", cls: "border-slate-300 bg-slate-50 text-slate-500" },
+  2: { label: "已取消", cls: "border-border bg-muted/40 text-muted-foreground" },
   3: { label: "已完成", cls: "border-emerald-200 bg-emerald-50 text-emerald-600" },
   4: { label: "已折扣", cls: "border-indigo-200 bg-indigo-50 text-indigo-600" }
 };
@@ -84,7 +84,7 @@ export function AdminOrderPage() {
   return (
     <Card className="rounded">
       <CardContent className="p-0">
-        <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100">
+        <div className="flex items-center gap-2 px-6 py-3 border-b border-border">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -106,20 +106,20 @@ export function AdminOrderPage() {
           <Button size="sm" className="h-9" onClick={() => setPage(1)}>
             查询
           </Button>
-          <span className="ml-auto text-xs text-slate-500">共 {total} 笔订单</span>
+          <span className="ml-auto text-xs text-muted-foreground">共 {total} 笔订单</span>
         </div>
 
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-slate-100 hover:bg-transparent">
-              <TableHead className="text-slate-500">订单号</TableHead>
-              <TableHead className="text-slate-500">用户</TableHead>
-              <TableHead className="text-slate-500">订阅</TableHead>
-              <TableHead className="text-slate-500">金额</TableHead>
-              <TableHead className="text-slate-500">周期</TableHead>
-              <TableHead className="text-slate-500">状态</TableHead>
-              <TableHead className="text-slate-500">创建时间</TableHead>
-              <TableHead className="text-right text-slate-500">操作</TableHead>
+            <TableRow className="border-b border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground">订单号</TableHead>
+              <TableHead className="text-muted-foreground">用户</TableHead>
+              <TableHead className="text-muted-foreground">订阅</TableHead>
+              <TableHead className="text-muted-foreground">金额</TableHead>
+              <TableHead className="text-muted-foreground">周期</TableHead>
+              <TableHead className="text-muted-foreground">状态</TableHead>
+              <TableHead className="text-muted-foreground">创建时间</TableHead>
+              <TableHead className="text-right text-muted-foreground">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -139,14 +139,14 @@ export function AdminOrderPage() {
               rows.map((o) => {
                 const st = STATUS_TAG[o.status] ?? { label: String(o.status), cls: "" };
                 return (
-                  <TableRow key={o.id} className="border-b border-slate-100">
+                  <TableRow key={o.id} className="border-b border-border">
                     <TableCell className="font-mono text-xs">{o.trade_no}</TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-foreground/80">
                       {o.user?.email ?? `#${o.id}`}
                     </TableCell>
-                    <TableCell className="text-slate-600">{o.plan?.name ?? "-"}</TableCell>
-                    <TableCell className="text-slate-600">¥ {formatCny(o.total_amount)}</TableCell>
-                    <TableCell className="text-slate-600">{o.period}</TableCell>
+                    <TableCell className="text-foreground/80">{o.plan?.name ?? "-"}</TableCell>
+                    <TableCell className="text-foreground/80">¥ {formatCny(o.total_amount)}</TableCell>
+                    <TableCell className="text-foreground/80">{o.period}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center rounded border px-2 py-0.5 text-xs ${st.cls}`}
@@ -154,7 +154,7 @@ export function AdminOrderPage() {
                         {st.label}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-muted-foreground">
                       {formatUnixDate(o.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
@@ -206,7 +206,7 @@ export function AdminOrderPage() {
           >
             ›
           </Button>
-          <span className="ml-2 inline-flex items-center text-slate-500">10 条 / 页</span>
+          <span className="ml-2 inline-flex items-center text-muted-foreground">10 条 / 页</span>
         </div>
       </CardContent>
     </Card>

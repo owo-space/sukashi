@@ -58,7 +58,7 @@ export function AdminServerGroupPage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button
               size="sm"
               variant="outline"
@@ -74,13 +74,13 @@ export function AdminServerGroupPage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">名称</TableHead>
-                <TableHead className="text-slate-500">用户数</TableHead>
-                <TableHead className="text-slate-500">节点数</TableHead>
-                <TableHead className="text-slate-500">创建时间</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">名称</TableHead>
+                <TableHead className="text-muted-foreground">用户数</TableHead>
+                <TableHead className="text-muted-foreground">节点数</TableHead>
+                <TableHead className="text-muted-foreground">创建时间</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -98,12 +98,12 @@ export function AdminServerGroupPage() {
                 </TableRow>
               ) : (
                 data.map((g) => (
-                  <TableRow key={g.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{g.id}</TableCell>
+                  <TableRow key={g.id} className="border-b border-border">
+                    <TableCell className="text-foreground/80">{g.id}</TableCell>
                     <TableCell className="font-medium">{g.name}</TableCell>
-                    <TableCell className="text-slate-600">{g.user_count ?? 0}</TableCell>
-                    <TableCell className="text-slate-600">{g.server_count ?? 0}</TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-foreground/80">{g.user_count ?? 0}</TableCell>
+                    <TableCell className="text-foreground/80">{g.server_count ?? 0}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
                       {formatUnixDate(g.created_at)}
                     </TableCell>
                     <TableCell className="text-right">

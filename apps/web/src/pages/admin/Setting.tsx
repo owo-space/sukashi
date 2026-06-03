@@ -252,10 +252,10 @@ export function AdminSettingPage() {
   }
 
   return (
-    <Card className="rounded border-slate-200">
+    <Card className="rounded border-border">
       <CardContent className="p-0">
         {/* Top tab bar */}
-        <div className="flex flex-wrap gap-0 border-b border-slate-200 px-4">
+        <div className="flex flex-wrap gap-0 border-b border-border px-4">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -265,7 +265,7 @@ export function AdminSettingPage() {
                 "px-4 py-3 text-sm transition-colors border-b-2 -mb-px",
                 active === t.id
                   ? "border-primary text-primary"
-                  : "border-transparent text-slate-600 hover:text-foreground"
+                  : "border-transparent text-foreground/80 hover:text-foreground"
               )}
             >
               {t.label}
@@ -277,12 +277,12 @@ export function AdminSettingPage() {
           {tab.fields.map((f) => (
             <div
               key={f.key}
-              className="flex items-start gap-6 border-b border-slate-100 px-6 py-4 last:border-0"
+              className="flex items-start gap-6 border-b border-border px-6 py-4 last:border-0"
             >
               <div className="w-60 shrink-0">
-                <div className="text-sm text-slate-700">{f.label}</div>
+                <div className="text-sm text-foreground">{f.label}</div>
                 {f.hint ? (
-                  <div className="mt-1 text-xs text-slate-400">{f.hint}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{f.hint}</div>
                 ) : null}
               </div>
               <div className="flex-1">

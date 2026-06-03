@@ -153,7 +153,7 @@ export function AdminCouponPage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button size="sm" variant="outline" className="h-9 gap-1" onClick={openCreate}>
               <Plus className="size-4" />
               生成优惠券
@@ -161,17 +161,17 @@ export function AdminCouponPage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">名称</TableHead>
-                <TableHead className="text-slate-500">代码</TableHead>
-                <TableHead className="text-slate-500">类型</TableHead>
-                <TableHead className="text-slate-500">数值</TableHead>
-                <TableHead className="text-slate-500">显示</TableHead>
-                <TableHead className="text-slate-500">可用次数</TableHead>
-                <TableHead className="text-slate-500">有效期</TableHead>
-                <TableHead className="text-slate-500">创建时间</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">名称</TableHead>
+                <TableHead className="text-muted-foreground">代码</TableHead>
+                <TableHead className="text-muted-foreground">类型</TableHead>
+                <TableHead className="text-muted-foreground">数值</TableHead>
+                <TableHead className="text-muted-foreground">显示</TableHead>
+                <TableHead className="text-muted-foreground">可用次数</TableHead>
+                <TableHead className="text-muted-foreground">有效期</TableHead>
+                <TableHead className="text-muted-foreground">创建时间</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -189,37 +189,37 @@ export function AdminCouponPage() {
                 </TableRow>
               ) : (
                 data.map((c) => (
-                  <TableRow key={c.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{c.id}</TableCell>
+                  <TableRow key={c.id} className="border-b border-border">
+                    <TableCell className="text-foreground/80">{c.id}</TableCell>
                     <TableCell>{c.name}</TableCell>
                     <TableCell>
                       <button
                         type="button"
                         onClick={() => copyCode(c.code)}
-                        className="inline-flex items-center gap-1.5 rounded font-mono text-xs text-slate-700 hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded font-mono text-xs text-foreground hover:text-primary"
                         title="点击复制"
                       >
                         {c.code}
-                        <Copy className="size-3 text-slate-400" />
+                        <Copy className="size-3 text-muted-foreground" />
                       </button>
                     </TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-foreground/80">
                       {c.type === 1 ? "百分比" : "固定金额"}
                     </TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-foreground/80">
                       {c.type === 1 ? `${c.value}%` : `¥ ${formatCny(c.value)}`}
                     </TableCell>
                     <TableCell>
                       <Switch checked={Boolean(c.show)} onCheckedChange={() => showToggle.mutate(c)} />
                     </TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-foreground/80">
                       <span className="font-mono">{c.used_count ?? 0}</span>
-                      <span className="text-slate-400"> / {c.limit_use ?? "∞"}</span>
+                      <span className="text-muted-foreground"> / {c.limit_use ?? "∞"}</span>
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-muted-foreground">
                       {formatUnixDate(c.started_at)} ~ {formatUnixDate(c.ended_at)}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-muted-foreground">
                       {c.created_at ? formatUnixDate(c.created_at) : "—"}
                     </TableCell>
                     <TableCell className="text-right">

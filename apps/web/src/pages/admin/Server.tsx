@@ -122,7 +122,7 @@ function PaginationFooter({
       >
         ›
       </Button>
-      <span className="ml-2 inline-flex items-center text-slate-500">10 条/页</span>
+      <span className="ml-2 inline-flex items-center text-muted-foreground">10 条/页</span>
     </div>
   );
 }
@@ -278,7 +278,7 @@ export function AdminServerPage() {
       <Card className="rounded">
         <CardContent className="p-0">
           {/* toolbar */}
-          <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-2 px-6 py-3 border-b border-border">
             <ProtocolMenu
               onPick={(protocol) => setEditing({ mode: "create", protocol })}
             />
@@ -333,30 +333,30 @@ export function AdminServerPage() {
 
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">节点ID</TableHead>
-                <TableHead className="text-slate-500">显隐</TableHead>
-                <TableHead className="text-slate-500">
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">节点ID</TableHead>
+                <TableHead className="text-muted-foreground">显隐</TableHead>
+                <TableHead className="text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     节点
                     <Help>节点名称及在线状态</Help>
                   </span>
                 </TableHead>
-                <TableHead className="text-slate-500">地址</TableHead>
-                <TableHead className="text-slate-500">
+                <TableHead className="text-muted-foreground">地址</TableHead>
+                <TableHead className="text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     人数
                     <Help>当前在线人数</Help>
                   </span>
                 </TableHead>
-                <TableHead className="text-slate-500">
+                <TableHead className="text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     倍率
                     <Help>计费倍率,1x 表示按实际流量计费</Help>
                   </span>
                 </TableHead>
-                <TableHead className="text-slate-500">权限组</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+                <TableHead className="text-muted-foreground">权限组</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -392,7 +392,7 @@ export function AdminServerPage() {
                   return (
                     <TableRow
                       key={s.id}
-                      className={`border-b border-slate-100 ${
+                      className={`border-b border-border ${
                         sortMode ? "cursor-move select-none" : ""
                       } ${dragId === s.id ? "opacity-40" : ""}`}
                       draggable={sortMode}
@@ -411,7 +411,7 @@ export function AdminServerPage() {
                       <TableCell>
                         {sortMode ? (
                           <span className="inline-flex items-center gap-2">
-                            <span className="text-slate-400">≡</span>
+                            <span className="text-muted-foreground">≡</span>
                             <ProtocolChip protocol={s.protocol}>{s.id}</ProtocolChip>
                           </span>
                         ) : (
@@ -435,22 +435,22 @@ export function AdminServerPage() {
                           <span>{s.name}</span>
                         </span>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-slate-600">
+                      <TableCell className="font-mono text-xs text-foreground/80">
                         {s.host}
                         {s.port ? `:${s.port}` : ""}
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-1 text-slate-600">
+                        <span className="inline-flex items-center gap-1 text-foreground/80">
                           <User className="size-3.5" strokeWidth={1.75} />
                           {s.online ?? 0}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                        <span className="inline-flex items-center rounded border border-border px-2 py-0.5 text-xs">
                           {s.rate} x
                         </span>
                       </TableCell>
-                      <TableCell className="text-slate-600 text-xs">{groupNames || "—"}</TableCell>
+                      <TableCell className="text-foreground/80 text-xs">{groupNames || "—"}</TableCell>
                       <TableCell className="text-right">
                         <RowActions>
                           <DropdownMenuItem
@@ -547,7 +547,7 @@ function Help({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <HelpCircle className="size-3.5 text-slate-400" strokeWidth={1.75} />
+          <HelpCircle className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent>{children}</TooltipContent>
       </Tooltip>

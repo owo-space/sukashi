@@ -514,7 +514,7 @@ export function ServerNodeForm({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-foreground border-b border-border pb-2">{title}</h3>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
   );

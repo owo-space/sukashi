@@ -66,7 +66,7 @@ export function AdminKnowledgePage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button
               size="sm"
               variant="outline"
@@ -82,14 +82,14 @@ export function AdminKnowledgePage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">显示</TableHead>
-                <TableHead className="text-slate-500">分类</TableHead>
-                <TableHead className="text-slate-500">标题</TableHead>
-                <TableHead className="text-slate-500">语言</TableHead>
-                <TableHead className="text-slate-500">更新时间</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">显示</TableHead>
+                <TableHead className="text-muted-foreground">分类</TableHead>
+                <TableHead className="text-muted-foreground">标题</TableHead>
+                <TableHead className="text-muted-foreground">语言</TableHead>
+                <TableHead className="text-muted-foreground">更新时间</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -107,19 +107,19 @@ export function AdminKnowledgePage() {
                 </TableRow>
               ) : (
                 data.map((k) => (
-                  <TableRow key={k.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{k.id}</TableCell>
+                  <TableRow key={k.id} className="border-b border-border">
+                    <TableCell className="text-foreground/80">{k.id}</TableCell>
                     <TableCell>
                       <Switch checked={Boolean(k.show)} onCheckedChange={() => showToggle.mutate(k)} />
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                      <span className="inline-flex items-center rounded border border-border px-2 py-0.5 text-xs">
                         {k.category}
                       </span>
                     </TableCell>
                     <TableCell>{k.title}</TableCell>
-                    <TableCell className="text-slate-600">{k.language ?? "-"}</TableCell>
-                    <TableCell className="text-xs text-slate-500">{formatUnixDate(k.updated_at)}</TableCell>
+                    <TableCell className="text-foreground/80">{k.language ?? "-"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{formatUnixDate(k.updated_at)}</TableCell>
                     <TableCell className="text-right">
                       <RowActions>
                         <DropdownMenuItem

@@ -22,7 +22,7 @@ export function RowActions({ children }: { children: React.ReactNode }) {
           <ChevronDown className="size-3" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32">
+      <DropdownMenuContent align="end" className="min-w-44">
         {children}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -54,7 +54,7 @@ export function NodeInstallDialog({
               : "在节点服务器以 root 用户执行下面的脚本即可。"}
           </DialogDescription>
         </DialogHeader>
-        <pre className="overflow-x-auto rounded border border-slate-200 bg-slate-50 p-3 text-xs whitespace-pre-wrap break-all">
+        <pre className="overflow-x-auto rounded border border-border bg-muted/40 p-3 text-xs whitespace-pre-wrap break-all">
           {command || "(暂无可用的安装命令)"}
         </pre>
         <div className="flex justify-end">

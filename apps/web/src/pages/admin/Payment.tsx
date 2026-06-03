@@ -141,11 +141,11 @@ export function AdminPaymentPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="rounded border-slate-200">
-        <CardHeader className="border-b border-slate-100 py-3">
+      <Card className="rounded border-border">
+        <CardHeader className="border-b border-border py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-sm font-medium text-slate-700">Stripe 支付配置</CardTitle>
-            <label className="flex items-center gap-2 text-sm text-slate-600">
+            <CardTitle className="text-sm font-medium text-foreground">Stripe 支付配置</CardTitle>
+            <label className="flex items-center gap-2 text-sm text-foreground/80">
               启用
               <Switch
                 checked={Boolean(form.enable)}
@@ -210,7 +210,7 @@ export function AdminPaymentPage() {
             span={2}
           >
             <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700">
+              <code className="min-w-0 flex-1 break-all rounded border border-border bg-muted/40 px-3 py-2 font-mono text-xs text-foreground">
                 {webhookUrl}
               </code>
               <Button variant="outline" onClick={copyWebhook} disabled={!form.uuid}>
@@ -220,7 +220,7 @@ export function AdminPaymentPage() {
             </div>
           </Field>
         </CardContent>
-        <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-3">
+        <div className="flex justify-end gap-2 border-t border-border px-6 py-3">
           <Button onClick={() => save.mutate()} disabled={save.isPending}>
             {save.isPending ? "保存中…" : "保存"}
           </Button>
@@ -250,7 +250,7 @@ function Field({
         {required ? <span className="text-rose-500 ml-0.5">*</span> : null}
       </Label>
       {children}
-      {hint ? <span className="text-xs text-slate-400">{hint}</span> : null}
+      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </div>
   );
 }

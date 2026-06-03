@@ -58,7 +58,7 @@ export function AdminNoticePage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button
               size="sm"
               variant="outline"
@@ -74,12 +74,12 @@ export function AdminNoticePage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">显示</TableHead>
-                <TableHead className="text-slate-500">标题</TableHead>
-                <TableHead className="text-slate-500">更新时间</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">显示</TableHead>
+                <TableHead className="text-muted-foreground">标题</TableHead>
+                <TableHead className="text-muted-foreground">更新时间</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -97,8 +97,8 @@ export function AdminNoticePage() {
                 </TableRow>
               ) : (
                 data.map((n) => (
-                  <TableRow key={n.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{n.id}</TableCell>
+                  <TableRow key={n.id} className="border-b border-border">
+                    <TableCell className="text-foreground/80">{n.id}</TableCell>
                     <TableCell>
                       <Switch
                         checked={Boolean(n.show)}
@@ -106,7 +106,7 @@ export function AdminNoticePage() {
                       />
                     </TableCell>
                     <TableCell>{n.title}</TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-muted-foreground">
                       {formatUnixDate(n.updated_at)}
                     </TableCell>
                     <TableCell className="text-right">

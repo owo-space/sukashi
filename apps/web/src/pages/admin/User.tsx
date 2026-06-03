@@ -206,7 +206,7 @@ export function AdminUserPage() {
       <Card className="rounded">
         <CardContent className="p-0">
           {/* toolbar */}
-          <div className="flex items-center gap-1.5 px-6 py-3 border-b border-slate-100">
+          <div className="flex items-center gap-1.5 px-6 py-3 border-b border-border">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="h-9 gap-1">
@@ -244,23 +244,23 @@ export function AdminUserPage() {
               placeholder="搜索邮箱"
               className="h-9 max-w-xs"
             />
-            <span className="ml-auto text-xs text-slate-500">共 {total} 个用户</span>
+            <span className="ml-auto text-xs text-muted-foreground">共 {total} 个用户</span>
           </div>
 
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="w-14 text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">邮箱</TableHead>
-                <TableHead className="text-slate-500">状态</TableHead>
-                <TableHead className="text-slate-500">订阅</TableHead>
-                <TableHead className="text-slate-500">权限组</TableHead>
-                <TableHead className="text-slate-500">已用 (G)</TableHead>
-                <TableHead className="text-slate-500">流量 (G)</TableHead>
-                <TableHead className="text-slate-500">设备数</TableHead>
-                <TableHead className="text-slate-500">余额</TableHead>
-                <TableHead className="text-slate-500">到期时间</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="w-14 text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">邮箱</TableHead>
+                <TableHead className="text-muted-foreground">状态</TableHead>
+                <TableHead className="text-muted-foreground">订阅</TableHead>
+                <TableHead className="text-muted-foreground">权限组</TableHead>
+                <TableHead className="text-muted-foreground">已用 (G)</TableHead>
+                <TableHead className="text-muted-foreground">流量 (G)</TableHead>
+                <TableHead className="text-muted-foreground">设备数</TableHead>
+                <TableHead className="text-muted-foreground">余额</TableHead>
+                <TableHead className="text-muted-foreground">到期时间</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -281,8 +281,8 @@ export function AdminUserPage() {
                   const used = ((u.u ?? 0) + (u.d ?? 0)) / 1024 ** 3;
                   const transfer = (u.transfer_enable ?? 0) / 1024 ** 3;
                   return (
-                    <TableRow key={u.id} className="border-b border-slate-100">
-                      <TableCell className="text-slate-600">{u.id}</TableCell>
+                    <TableRow key={u.id} className="border-b border-border">
+                      <TableCell className="text-foreground/80">{u.id}</TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="size-1.5 rounded-full bg-sky-500" />
@@ -292,28 +292,30 @@ export function AdminUserPage() {
                       <TableCell>
                         <StatusTag banned={u.banned} />
                       </TableCell>
-                      <TableCell className="text-slate-600">{u.plan_name ?? "-"}</TableCell>
-                      <TableCell className="text-slate-600">{u.group_name ?? "-"}</TableCell>
-                      <TableCell className="text-slate-600">{used.toFixed(2)}</TableCell>
-                      <TableCell className="text-slate-600">{transfer.toFixed(2)}</TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="text-foreground/80">{u.plan_name ?? "-"}</TableCell>
+                      <TableCell className="text-foreground/80">{u.group_name ?? "-"}</TableCell>
+                      <TableCell className="text-foreground/80">{used.toFixed(2)}</TableCell>
+                      <TableCell className="text-foreground/80">{transfer.toFixed(2)}</TableCell>
+                      <TableCell className="text-foreground/80">
                         {u.device_limit ?? "0 / ∞"}
                       </TableCell>
-                      <TableCell className="text-slate-600">¥ {formatCny(u.balance)}</TableCell>
-                      <TableCell className="text-xs text-slate-500">
+                      <TableCell className="text-foreground/80">¥ {formatCny(u.balance)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
                         {u.expired_at == null ? "长期有效" : formatUnixDate(u.expired_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <RowActions>
                           <DropdownMenuItem onClick={() => openEdit(u)}>编辑</DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => copySubscribeUrl(u)}>
                             复制订阅链接
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => resetSecret.mutate(u)}>
                             重置订阅
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => ban.mutate(u)}>
-                            {u.banned ? "解封" : "封禁"}
+                            {u.banned ? "解封用户" : "封禁用户"}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -346,7 +348,7 @@ export function AdminUserPage() {
             <span className="inline-flex size-7 items-center justify-center rounded border border-primary bg-white text-primary">
               {page}
             </span>
-            <span className="text-slate-400">/ {totalPages}</span>
+            <span className="text-muted-foreground">/ {totalPages}</span>
             <Button
               size="sm"
               variant="ghost"
@@ -536,7 +538,7 @@ export function AdminUserPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-foreground border-b border-border pb-2">{title}</h3>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
   );

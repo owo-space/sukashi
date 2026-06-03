@@ -90,7 +90,7 @@ export function AdminGiftcardPage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button
               size="sm"
               variant="outline"
@@ -106,14 +106,14 @@ export function AdminGiftcardPage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">名称</TableHead>
-                <TableHead className="text-slate-500">代码</TableHead>
-                <TableHead className="text-slate-500">类型</TableHead>
-                <TableHead className="text-slate-500">金额/Plan</TableHead>
-                <TableHead className="text-slate-500">有效期</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">名称</TableHead>
+                <TableHead className="text-muted-foreground">代码</TableHead>
+                <TableHead className="text-muted-foreground">类型</TableHead>
+                <TableHead className="text-muted-foreground">金额/Plan</TableHead>
+                <TableHead className="text-muted-foreground">有效期</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,19 +131,19 @@ export function AdminGiftcardPage() {
                 </TableRow>
               ) : (
                 data.map((g) => (
-                  <TableRow key={g.id} className="border-b border-slate-100">
-                    <TableCell className="text-slate-600">{g.id}</TableCell>
+                  <TableRow key={g.id} className="border-b border-border">
+                    <TableCell className="text-foreground/80">{g.id}</TableCell>
                     <TableCell>{g.name}</TableCell>
                     <TableCell className="font-mono text-xs">{g.code}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                      <span className="inline-flex items-center rounded border border-border px-2 py-0.5 text-xs">
                         {g.type === 1 ? "余额" : "订阅"}
                       </span>
                     </TableCell>
-                    <TableCell className="text-slate-600">
+                    <TableCell className="text-foreground/80">
                       {g.type === 1 ? `¥ ${formatCny(g.value ?? 0)}` : `Plan #${g.plan_id ?? "-"}`}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-500">
+                    <TableCell className="text-xs text-muted-foreground">
                       {formatUnixDate(g.started_at)} ~ {formatUnixDate(g.ended_at)}
                     </TableCell>
                     <TableCell className="text-right">

@@ -61,13 +61,13 @@ export function FormDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {fields.map((f) => {
             const value = values[f.key];
             const wrap = f.span === 2 || f.type === "textarea" ? "md:col-span-2" : "";
             if (f.type === "switch") {
               return (
-                <div key={f.key} className={`flex items-center justify-between gap-2 rounded border px-3 py-2 ${wrap}`}>
+                <div key={f.key} className={`flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 ${wrap}`}>
                   <Label htmlFor={f.key} className="text-sm">
                     {f.label}
                   </Label>

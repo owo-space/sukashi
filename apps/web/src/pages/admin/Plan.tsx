@@ -57,7 +57,7 @@ function Help({ children }: { children: React.ReactNode }) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <HelpCircle className="size-3 text-slate-400" strokeWidth={1.75} />
+          <HelpCircle className="size-3 text-muted-foreground" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent>{children}</TooltipContent>
       </Tooltip>
@@ -68,7 +68,7 @@ function Help({ children }: { children: React.ReactNode }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-sm font-medium text-slate-700 border-b border-slate-200 pb-2">{title}</h3>
+      <h3 className="text-sm font-medium text-foreground border-b border-border pb-2">{title}</h3>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
   );
@@ -167,7 +167,7 @@ export function AdminPlanPage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button size="sm" variant="outline" className="h-9 gap-1" onClick={openCreate}>
               <Plus className="size-4" />
               添加订阅
@@ -176,24 +176,24 @@ export function AdminPlanPage() {
 
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="w-12 text-slate-500">排序</TableHead>
-                <TableHead className="text-slate-500">销售状态</TableHead>
-                <TableHead className="text-slate-500">
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="w-12 text-muted-foreground">排序</TableHead>
+                <TableHead className="text-muted-foreground">销售状态</TableHead>
+                <TableHead className="text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     续费 <Help>关闭后,订阅到期不可续费</Help>
                   </span>
                 </TableHead>
-                <TableHead className="text-slate-500">名称</TableHead>
-                <TableHead className="text-slate-500">统计</TableHead>
-                <TableHead className="text-slate-500">流量</TableHead>
-                <TableHead className="text-slate-500">设备数限制</TableHead>
+                <TableHead className="text-muted-foreground">名称</TableHead>
+                <TableHead className="text-muted-foreground">统计</TableHead>
+                <TableHead className="text-muted-foreground">流量</TableHead>
+                <TableHead className="text-muted-foreground">设备数限制</TableHead>
                 {PRICE_COLS.map(([key, label]) => (
-                  <TableHead key={key as string} className="text-slate-500">
+                  <TableHead key={key as string} className="text-muted-foreground">
                     {label}
                   </TableHead>
                 ))}
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -211,9 +211,9 @@ export function AdminPlanPage() {
                 </TableRow>
               ) : (
                 data.map((p) => (
-                  <TableRow key={p.id} className="border-b border-slate-100">
+                  <TableRow key={p.id} className="border-b border-border">
                     <TableCell>
-                      <GripVertical className="size-4 text-slate-400 cursor-move" />
+                      <GripVertical className="size-4 text-muted-foreground cursor-move" />
                     </TableCell>
                     <TableCell>
                       <Switch
@@ -231,17 +231,17 @@ export function AdminPlanPage() {
                     </TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center gap-1 text-slate-600">
+                      <span className="inline-flex items-center gap-1 text-foreground/80">
                         <User className="size-3" strokeWidth={1.75} />
                         {p.count ?? 0}
                       </span>
                     </TableCell>
-                    <TableCell className="text-slate-600">{p.transfer_enable} GB</TableCell>
-                    <TableCell className="text-slate-600">{p.device_limit ?? "-"}</TableCell>
+                    <TableCell className="text-foreground/80">{p.transfer_enable} GB</TableCell>
+                    <TableCell className="text-foreground/80">{p.device_limit ?? "-"}</TableCell>
                     {PRICE_COLS.map(([key]) => {
                       const v = p[key] as number | null | undefined;
                       return (
-                        <TableCell key={key as string} className="text-slate-600">
+                        <TableCell key={key as string} className="text-foreground/80">
                           {v && v > 0 ? formatCny(v) : "-"}
                         </TableCell>
                       );
@@ -276,7 +276,7 @@ export function AdminPlanPage() {
         submitting={save.isPending}
         onSubmit={() => save.mutate(form)}
         extraLeft={
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-2 text-sm text-foreground/80">
             <Checkbox
               checked={forceUpdate}
               onCheckedChange={(c) => setForceUpdate(Boolean(c))}

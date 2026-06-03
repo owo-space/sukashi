@@ -84,7 +84,7 @@ export function AdminServerRoutePage() {
     <>
       <Card className="rounded">
         <CardContent className="p-0">
-          <div className="px-6 py-3 border-b border-slate-100">
+          <div className="px-6 py-3 border-b border-border">
             <Button
               size="sm"
               variant="outline"
@@ -100,12 +100,12 @@ export function AdminServerRoutePage() {
           </div>
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-slate-100 hover:bg-transparent">
-                <TableHead className="text-slate-500">ID</TableHead>
-                <TableHead className="text-slate-500">备注</TableHead>
-                <TableHead className="text-slate-500">动作</TableHead>
-                <TableHead className="text-slate-500">匹配条目</TableHead>
-                <TableHead className="text-right text-slate-500">操作</TableHead>
+              <TableRow className="border-b border-border hover:bg-transparent">
+                <TableHead className="text-muted-foreground">ID</TableHead>
+                <TableHead className="text-muted-foreground">备注</TableHead>
+                <TableHead className="text-muted-foreground">动作</TableHead>
+                <TableHead className="text-muted-foreground">匹配条目</TableHead>
+                <TableHead className="text-right text-muted-foreground">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,16 +125,16 @@ export function AdminServerRoutePage() {
                 data.map((r) => {
                   const matches = Array.isArray(r.match) ? r.match : [];
                   return (
-                    <TableRow key={r.id} className="border-b border-slate-100">
-                      <TableCell className="text-slate-600">{r.id}</TableCell>
+                    <TableRow key={r.id} className="border-b border-border">
+                      <TableCell className="text-foreground/80">{r.id}</TableCell>
                       <TableCell>{r.remarks}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center rounded border border-slate-200 px-2 py-0.5 text-xs">
+                        <span className="inline-flex items-center rounded border border-border px-2 py-0.5 text-xs">
                           {r.action}
                           {r.action_value ? ` → ${r.action_value}` : ""}
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs text-slate-500">
+                      <TableCell className="text-xs text-muted-foreground">
                         {matches.length} 条
                       </TableCell>
                       <TableCell className="text-right">

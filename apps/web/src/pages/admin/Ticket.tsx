@@ -48,15 +48,15 @@ export function AdminTicketPage() {
       <CardContent className="p-0">
         <Table>
           <TableHeader>
-            <TableRow className="border-b border-slate-100 hover:bg-transparent">
-              <TableHead className="text-slate-500">ID</TableHead>
-              <TableHead className="text-slate-500">用户</TableHead>
-              <TableHead className="text-slate-500">主题</TableHead>
-              <TableHead className="text-slate-500">级别</TableHead>
-              <TableHead className="text-slate-500">状态</TableHead>
-              <TableHead className="text-slate-500">创建时间</TableHead>
-              <TableHead className="text-slate-500">最后回复</TableHead>
-              <TableHead className="text-right text-slate-500">操作</TableHead>
+            <TableRow className="border-b border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground">ID</TableHead>
+              <TableHead className="text-muted-foreground">用户</TableHead>
+              <TableHead className="text-muted-foreground">主题</TableHead>
+              <TableHead className="text-muted-foreground">级别</TableHead>
+              <TableHead className="text-muted-foreground">状态</TableHead>
+              <TableHead className="text-muted-foreground">创建时间</TableHead>
+              <TableHead className="text-muted-foreground">最后回复</TableHead>
+              <TableHead className="text-right text-muted-foreground">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -74,24 +74,24 @@ export function AdminTicketPage() {
               </TableRow>
             ) : (
               data.map((t) => (
-                <TableRow key={t.id} className="border-b border-slate-100">
-                  <TableCell className="text-slate-600">{t.id}</TableCell>
-                  <TableCell className="text-slate-600">{t.user?.email ?? `#${t.user_id}`}</TableCell>
+                <TableRow key={t.id} className="border-b border-border">
+                  <TableCell className="text-foreground/80">{t.id}</TableCell>
+                  <TableCell className="text-foreground/80">{t.user?.email ?? `#${t.user_id}`}</TableCell>
                   <TableCell>{t.subject}</TableCell>
-                  <TableCell className="text-slate-600">{LEVEL_LABEL[t.level]}</TableCell>
+                  <TableCell className="text-foreground/80">{LEVEL_LABEL[t.level]}</TableCell>
                   <TableCell>
                     {t.status === 0 ? (
                       <span className="inline-flex items-center rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-600">
                         {t.reply_status ? "待回复" : "已开启"}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs text-slate-500">
+                      <span className="inline-flex items-center rounded border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground">
                         已关闭
                       </span>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-slate-500">{formatUnixDate(t.created_at)}</TableCell>
-                  <TableCell className="text-xs text-slate-500">{formatUnixDate(t.updated_at)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatUnixDate(t.created_at)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatUnixDate(t.updated_at)}</TableCell>
                   <TableCell className="text-right">
                     <RowActions>
                       {t.status === 0 ? (
