@@ -2,8 +2,8 @@ name: Build and push Docker image
 
 on:
   push:
-    # shadcn-v1 is the current working mainline; drop it once merged to main.
-    branches: [main, shadcn-v1]
+    # shadcn-v1 is the default branch / mainline; main is deprecated.
+    branches: [shadcn-v1]
     tags: ["v*"]
   workflow_dispatch:
 
