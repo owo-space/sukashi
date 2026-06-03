@@ -32,6 +32,7 @@ import type { Plan } from "@/lib/types";
 interface AdminUser {
   id: number;
   email: string;
+  token?: string;
   banned: number;
   is_admin?: number;
   is_staff?: number;
@@ -182,6 +183,20 @@ export function AdminUserPage() {
     onSuccess: () => toast.success("订阅信息已重置")
   });
 
+  async function copySubscribeUrl(u: AdminUser) {
+    if (!u.token) {
+      toast.error("该用户缺少订阅令牌");
+      return;
+    }
+    const url = `${window.location.origin}/api/v1/client/subscribe?token=${u.token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("订阅链接已复制");
+    } catch {
+      toast.error("复制失败,请手动复制");
+    }
+  }
+
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -291,6 +306,9 @@ export function AdminUserPage() {
                       <TableCell className="text-right">
                         <RowActions>
                           <DropdownMenuItem onClick={() => openEdit(u)}>编辑</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => copySubscribeUrl(u)}>
+                            复制订阅链接
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => resetSecret.mutate(u)}>
                             重置订阅
                           </DropdownMenuItem>

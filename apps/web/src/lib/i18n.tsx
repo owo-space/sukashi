@@ -210,6 +210,22 @@ const EN: Record<string, string> = {
   "重置订阅信息": "Reset Subscription Info",
   "当你的订阅地址或账户发生泄漏被他人滥用时，可以在此重置订阅信息。避免带来不必要的损失。": "Reset subscription info here if your subscription URL or account was leaked and abused.",
   "重 置": "Reset",
+  "重置订阅": "Reset Subscription",
+  "复制订阅链接": "Copy Subscription URL",
+  "订阅链接已复制": "Subscription URL copied",
+  "订阅信息已重置": "Subscription info reset",
+  "该用户缺少订阅令牌": "This user has no subscription token",
+  "复制失败,请手动复制": "Copy failed, please copy manually",
+  "暂无可选周期": "No selectable cycle",
+  "余额 (CNY 分)": "Balance (CNY cents)",
+  "流量重置方式 (0 = 月初, 1 = 购买日, 2 = 不重置)": "Traffic reset (0 = month start, 1 = purchase day, 2 = never)",
+  "显示": "Show",
+  "生成": "Generate",
+  "标题": "Title",
+  "更新时间": "Updated At",
+  "添加 Stripe": "Add Stripe",
+  "设备数": "Devices",
+  "— 无 —": "— None —",
   "两次新密码不一致": "New passwords do not match",
   "密码已更新": "Password updated",
   "兑换成功": "Redeemed",
@@ -884,6 +900,55 @@ const JA: Record<string, string> = {
 };
 
 const ZH_TW_TERMS: Record<string, string> = {
+  // Ambiguous simplified chars resolved as whole words (these must precede the
+  // single-char fallbacks below; convertToTraditional applies longest-first).
+  "复刻": "複刻",
+  "重复": "重複",
+  "恢复": "恢復",
+  // Single-char simplified -> traditional fallbacks so any string not covered by
+  // a word term above still fully converts (no leftover simplified glyphs).
+  "为": "為",
+  "习": "習",
+  "买": "買",
+  "仅": "僅",
+  "们": "們",
+  "价": "價",
+  "余": "餘",
+  "兑": "兌",
+  "关": "關",
+  "击": "擊",
+  "则": "則",
+  "单": "單",
+  "备": "備",
+  "对": "對",
+  "当": "當",
+  "总": "總",
+  "换": "換",
+  "无": "無",
+  "时": "時",
+  "显": "顯",
+  "样": "樣",
+  "点": "點",
+  "码": "碼",
+  "级": "級",
+  "细": "細",
+  "结": "結",
+  "编": "編",
+  "获": "獲",
+  "规": "規",
+  "计": "計",
+  "设": "設",
+  "证": "證",
+  "该": "該",
+  "请": "請",
+  "购": "購",
+  "费": "費",
+  "过": "過",
+  "这": "這",
+  "选": "選",
+  "间": "間",
+  "项": "項",
+  "验": "驗",
   "仪表盘": "儀表板",
   "使用文档": "使用文件",
   "订阅": "訂閱",
@@ -1237,6 +1302,15 @@ export function translateText(source: string, locale: Locale): string {
   const trimmed = source.trim();
   if (!trimmed) return source;
 
+  // Exact dictionary match wins over the partial REPLACEMENTS regexes so that a
+  // fully-authored string (e.g. "重置订阅") is never half-translated by a
+  // substring rule into "重置Subscription". Dynamic strings (counts, names)
+  // have no exact entry and still fall through to the regex / term replacement.
+  if (locale === "en" || locale === "ja") {
+    const exact = (locale === "ja" ? JA : EN)[trimmed];
+    if (exact) return preserveWhitespace(source, exact);
+  }
+
   for (const [pattern, replacement] of REPLACEMENTS[locale]) {
     if (pattern.test(trimmed)) {
       return preserveWhitespace(source, trimmed.replace(pattern, replacement));
@@ -1246,10 +1320,6 @@ export function translateText(source: string, locale: Locale): string {
   if (locale === "zh-TW") {
     return preserveWhitespace(source, convertToTraditional(trimmed));
   }
-
-  const dictionary = locale === "ja" ? JA : EN;
-  const exact = dictionary[trimmed];
-  if (exact) return preserveWhitespace(source, exact);
 
   const replaced = replaceKnownTerms(trimmed, locale);
   return preserveWhitespace(source, replaced);
