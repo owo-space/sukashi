@@ -414,15 +414,18 @@ export class AdminUserController {
 
   @Post("update")
   async update(@Body() body: Record<string, unknown>) {
-    const id = Number(body.id);
-    const currentUser = await this.prisma.user.findUniqueOrThrow({ where: { id } });
+    const id = asNullableNumber(body.id);
+    const isCreate = id === null;
+    const currentUser = isCreate
+      ? null
+      : await this.prisma.user.findUniqueOrThrow({ where: { id } });
     const data: Prisma.UserUpdateInput = {
       updatedAt: unixNow()
     };
 
     if (body.email !== undefined) {
       const nextEmail = String(body.email).trim().toLowerCase();
-      if (nextEmail !== currentUser.email) {
+      if (nextEmail !== currentUser?.email) {
         const taken = await this.prisma.user.findUnique({ where: { email: nextEmail } });
         if (taken) throw new Error("邮箱已被使用");
       }
@@ -451,7 +454,7 @@ export class AdminUserController {
 
     if (body.plan_id !== undefined) {
       const nextPlanId = asNullableNumber(body.plan_id);
-      if (nextPlanId !== currentUser.planId) {
+      if (isCreate || nextPlanId !== currentUser?.planId) {
         Object.assign(data, await this.planAssignmentData(body.plan_id));
       }
     }
@@ -472,7 +475,7 @@ export class AdminUserController {
     }
     if (body.banned !== undefined) {
       data.banned = asBoolean(body.banned);
-      if (data.banned) {
+      if (data.banned && id !== null) {
         await this.authService.removeAllSessions(id);
       }
     }
@@ -493,10 +496,24 @@ export class AdminUserController {
         body.remarks === undefined || body.remarks === null ? null : String(body.remarks);
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data
-    });
+    let user;
+    if (isCreate) {
+      if (!data.email) throw new Error("邮箱不能为空");
+      if (!data.password) throw new Error("密码不能为空");
+      user = await this.prisma.user.create({
+        data: {
+          ...(data as Prisma.UserUncheckedCreateInput),
+          uuid: randomUUID(),
+          token: randomToken(),
+          createdAt: unixNow()
+        }
+      });
+    } else {
+      user = await this.prisma.user.update({
+        where: { id: id! },
+        data
+      });
+    }
     const plan = user.planId
       ? await this.prisma.plan.findUnique({ where: { id: user.planId } })
       : null;
